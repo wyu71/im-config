@@ -1,0 +1,13 @@
+Description: Hide Input Method settings desktop entry
+ Keep the desktop entry installed for compatibility but hide it from menus.
+---
+diff --git a/im-config.desktop.in b/im-config.desktop.in
+index 829f6c1..57a0227 100644
+--- a/im-config.desktop.in
++++ b/im-config.desktop.in
+@@ -8,4 +8,5 @@ Terminal=false
+ Icon=input-keyboard
+ Categories=Settings
+ X-AppStream-Ignore=true
++NoDisplay=true
+ # https://specifications.freedesktop.org/desktop-entry/latest/

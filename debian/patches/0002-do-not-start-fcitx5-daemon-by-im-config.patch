@@ -1,0 +1,25 @@
+Description: Do not start fcitx5 daemon from im-config
+ fcitx5 is started through its autostart desktop file.  Do not configure
+ im-config to source a launcher which starts another daemon instance.
+---
+diff --git a/data/23_fcitx5.x11_env b/data/23_fcitx5.x11_env
+index 26d27ee..62b5ba1 100644
+--- a/data/23_fcitx5.x11_env
++++ b/data/23_fcitx5.x11_env
+@@ -8,5 +8,4 @@ CLUTTER_IM_MODULE=xim
+ # See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1008481#40
+ SDL_IM_MODULE=fcitx
+ 
+-# daemon program to launch
+-IM_CONFIG_LAUNCH="/usr/share/im-config/data/23_fcitx5.x11_launch"
++# fcitx5 is launched by its autostart desktop file.
+diff --git a/data/23_fcitx5.x11_launch b/data/23_fcitx5.x11_launch
+deleted file mode 100644
+index 8491fd9..0000000
+--- a/data/23_fcitx5.x11_launch
++++ /dev/null
+@@ -1,4 +0,0 @@
+-# start fcitx5 daemon
+-if [ -x /usr/bin/fcitx5 ]; then
+-  /usr/bin/fcitx5 -d 2> /dev/null
+-fi

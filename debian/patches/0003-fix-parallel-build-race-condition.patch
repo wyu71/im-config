@@ -1,0 +1,17 @@
+Description: Fix parallel build race between msgfmt and msgmerge
+ Ensure PO files have been updated before msgfmt generates the translated
+ desktop file, preventing concurrent reads while msgmerge writes a PO file.
+---
+diff --git a/Makefile b/Makefile
+index 472ea8d..914c7d9 100644
+--- a/Makefile
++++ b/Makefile
+@@ -29,7 +29,7 @@ all: im-config im-config.desktop mo
+ im-config: im-config.in
+ 	sed -e "s/@@VERSION@@/$(VERSION)/" <$< >$@
+ 
+-im-config.desktop: im-config.desktop.in
++im-config.desktop: im-config.desktop.in po
+ 	msgfmt --desktop --template=$< -d po -o $@
+ 
+ po/locale/%/LC_MESSAGES/$(PROGRAM).mo: po/%.po
