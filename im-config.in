@@ -1,0 +1,485 @@
+#!/bin/sh -e
+# Input Method configuration
+# (C) 2010-2026 Osamu Aoki <osamu@debian.org>, GPL-2+
+#############################################################
+# Debug options and facilities
+#
+# autopkgtest environment may not have systemd running and screen accessible
+# i.e., no systemd-cat, no zenity
+#############################################################
+# debug related options
+IM_CONFIG_SETMODE="${IM_CONFIG_SETMODE:-+x}"
+set "$IM_CONFIG_SETMODE"
+#############################################################
+# GETTEXT setup for i18n/l17n (gettext-base deb package)
+#############################################################
+. /usr/bin/gettext.sh
+TEXTDOMAIN="im-config"
+export TEXTDOMAIN
+TEXTDOMAINDIR="/usr/share/locale/"
+export TEXTDOMAINDIR
+#############################################################
+# GLOBAL variables (initial)
+#############################################################
+IM_CONFIG_VERBOSE="${IM_CONFIG_VERBOSE:-1}"
+IM_CONFIG_DEFAULT="${IM_CONFIG_DEFAULT:-/etc/default/im-config}"
+IM_CONFIG_USR_BASE="${IM_CONFIG_USR_BASE:-/usr/share/im-config}"
+IM_CONFIG_DATA_BASE="${IM_CONFIG_DATA_BASE:-/usr/share/im-config/data}"
+IM_CONFIG_CONF_FILE=".xinputrc"
+IM_CONFIG_CONF_PATH="$HOME/$IM_CONFIG_CONF_FILE"
+IM_CONFIG_TITLE="$(eval_gettext 'Input Method Configuration (im-config, ver.') @@VERSION@@)"
+IM_CONFIG_RTFM="$(eval_gettext "See im-config(8), README.Debian.")"
+IM_CONFIG_COPYRIGHT="(c) 2026 Osamu Aoki <osamu@debian.org>, GPL-2+"
+if [ -x /usr/bin/zenity ]; then
+  IM_CONFIG_DIALOG="${IM_CONFIG_DIALOG:-ZENITY}"
+elif [ -x /usr/bin/kdialog ]; then
+  IM_CONFIG_DIALOG="${IM_CONFIG_DIALOG:-KDIALOG}"
+elif [ -x /usr/bin/whiptail ]; then
+  IM_CONFIG_DIALOG="${IM_CONFIG_DIALOG:-WHIPTAIL}"
+else
+  echo "E: one of zenity/kdialog/whiptail must be installed." >&2
+  logger_error "E: one of zenity/kdialog/whiptail must be installed."
+  exit 1
+fi
+MSGBOX="msgbox"
+YESNO="yesno"
+#############################################################
+# Functions
+#############################################################
+# shellcheck disable=SC1091
+. "${IM_CONFIG_USR_BASE}/logger_function"
+# shellcheck disable=SC1091
+. "${IM_CONFIG_USR_BASE}/common_function"
+# shellcheck disable=SC1091
+. "${IM_CONFIG_USR_BASE}/ui_function"
+if [ "$IM_CONFIG_DIALOG" = "ZENITY" ] && [ -x /usr/bin/kdialog ] && \
+    find_item_in_list "$XDG_CURRENT_DESKTOP" "KDE:LXQt" ; then
+  IM_CONFIG_DIALOG="KDIALOG"
+fi
+#############################################################
+# Note on *.conf files
+# $IM_CONFIG_DATA_BASE/[01][0123456789]_*.conf ---- non-IM, menu-only
+# $IM_CONFIG_DATA_BASE/[2345][0123456789]_*.conf -- IM, menu
+# $IM_CONFIG_DATA_BASE/[67][0123456789]_*.conf ---- non-IM, menu-only
+# $IM_CONFIG_DATA_BASE/[8][0123456789]_*.conf ----- internal (DE)
+# $IM_CONFIG_DATA_BASE/[9][0123456789]_*.conf ----- not used (memo)
+#############################################################
+# Functions (menu configuration)
+#############################################################
+count_im() {
+  local NUMBER=0 CONF_PATH NAME
+  # *.conf file name for the real IM data starts between 20-59
+  for CONF_PATH in "$IM_CONFIG_DATA_BASE"/[2345][0123456789]_*.conf; do
+    NAME=$(get_name_from_conf_path "$CONF_PATH")
+    if is_conf_available "$NAME"; then
+      NUMBER="$((NUMBER + 1))"
+    fi
+  done
+  echo -n "$NUMBER"
+}
+read_set_name_in_conf() {
+  local NAME
+  if [ -r "$IM_CONFIG_CONF_PATH" ]; then
+    NAME=$(sed -n -e 's/^run_im \([^ ]*\) *$/\1/p' < "$IM_CONFIG_CONF_PATH" | head -1)
+  # backward compatibility to allow old names in config
+    if [ "$NAME" = "default" ] || [ "$NAME" = "cjkv" ]; then
+      NAME="auto"
+    elif [ -z "$NAME" ] || [ "$NAME" = "x11" ]; then
+      NAME="none"
+    fi
+    echo -n "$NAME"
+  else
+    echo -n "auto"
+  fi
+}
+
+#############################################################
+# Functions (UI dialogs)
+#############################################################
+# notify_non_x11_msgbox $TITLE
+notify_non_x11_msgbox() {
+  local MSG
+  MSG="\
+  $(eval_gettext 'im-config does nothing for the non-X11 environment.')
+
+    XDG_SESSION_TYPE=$XDG_SESSION_TYPE
+
+  This im-config package can be safely removed.
+
+  $(eval_gettext 'Click Ok to exit this dialog.')
+
+  $IM_CONFIG_RTFM"
+  $MSGBOX "$IM_CONFIG_TITLE" "$MSG" || true
+}
+#############################################################
+# notify_modified_msgbox $TITLE
+# ->OK to proceed
+notify_modified_msgbox() {
+  local MSG
+  MSG="\
+$(eval_gettext 'Manual modifiation to the configuration file is detected.')
+
+$(eval_gettext 'Configuration file'): ~/${IM_CONFIG_CONF_FILE}
+
+  * $(eval_gettext 'Keep this file, and manage the IM manually.')
+  * $(eval_gettext 'Remove this file manually, and manage the IM.')
+
+$(eval_gettext 'Click Ok to exit this dialog.')
+
+${IM_CONFIG_RTFM}"
+  $MSGBOX "$IM_CONFIG_TITLE" "$MSG" || true
+}
+#############################################################
+# notify_unreadable_msgbox $TITLE
+# ->OK to proceed
+notify_unreadable_msgbox() {
+  local MSG
+  MSG="\
+$(eval_gettext 'The configuration file exists but is not readable.')
+
+$(eval_gettext 'Configuration file'): ~/${IM_CONFIG_CONF_FILE}
+
+$(eval_gettext 'Check permissions and ownership of this file.')
+
+$(eval_gettext 'Click Ok to exit this dialog.')
+
+${IM_CONFIG_RTFM}"
+  $MSGBOX "$IM_CONFIG_TITLE" "$MSG" || true
+}
+#############################################################
+# notify_no_im_msgbox $TITLE
+# -> LOGICAL_TRUE for OK/Cansel
+notify_no_im_msgbox() {
+  local MSG
+  MSG="\
+$(eval_gettext 'IM framework offering packages are missing.')
+
+$(eval_gettext 'Install some IME plugin packages to enable entering non-ASCII characters.')
+
+    $(eval_gettext 'For example'):
+        ibus-mozc, ibus-hangul, ibus-libthai, ibus-m17n,
+        ibus-chewing, ibus-libpinyin, fcitx5-chinese-addon, ...
+
+${IM_CONFIG_RTFM}"
+  $MSGBOX "$IM_CONFIG_TITLE" "$MSG" || true
+}
+#############################################################
+# UI for x11 (top down view)
+#############################################################
+im_config_ui() {
+  local NAME
+  if select_im_yesno ; then
+    NAME="$(select_im_dialog)"
+    logger_debug "D:   Selected NAME='$NAME'"
+    if [ -z "$NAME" ]; then
+      keep_im_msgbox
+    else
+      # avoid using "$NAME" here since depending dialog radio list program
+      # $NAME may be quoted or non-quoted text
+      # shellcheck disable=SC2086
+      update_im_msgbox $NAME
+    fi
+  fi
+}
+#############################################################
+# select_im_yesno $TITLE
+# -> LOGICAL_TRUE for Yes
+# -> LOGICAL_FALSE for No
+select_im_yesno() {
+  local MSG
+  NAME="$(read_set_name_in_conf)"
+  MSG="\
+$(eval_gettext 'Do you change the IM framework configuration?')
+
+$(describe_configuration "$NAME")
+
+$(eval_gettext 'Select'):
+  * $(eval_gettext 'No'): $(eval_gettext 'Accept this configuration.')
+  * $(eval_gettext 'Yes'): $(eval_gettext 'Change this configuration.')
+
+${IM_CONFIG_RTFM}"
+  $YESNO  "$IM_CONFIG_TITLE" "$MSG"
+}
+#############################################################
+# select_im_dialog $TITLE
+# -> IM_NAME ('' for none)
+select_im_dialog() {
+  local MENULIST PATH_CONF NAME DESCRIPTION
+  SET_NAME="$(read_set_name_in_conf)"
+  MENULIST="$(radiolist_init \
+    "$IM_CONFIG_TITLE" \
+    "$(eval_gettext 'Select IM framework from radio buttons')" \
+    "$(eval_gettext 'Select')" \
+    "$(eval_gettext 'IM')" \
+    "$(eval_gettext 'Description')")"
+
+  # Make selection menu list (00-79)
+  PRIORITY_IM_NAME="$(priority_im_name)"
+  for PATH_CONF in $(echo "$IM_CONFIG_DATA_BASE"/[01234567][0123456789]_*.conf | sort); do
+    NAME="$(get_name_from_conf_path "$PATH_CONF")"
+    DESCRIPTION="$(read_description "$NAME")"
+    if [ "$NAME" = "$PRIORITY_IM_NAME" ]; then
+      DESCRIPTION="$DESCRIPTION @@@"
+    fi
+    if is_conf_available "$NAME"; then
+      if [ "$NAME" = "$SET_NAME" ]; then
+        MENULIST="$MENULIST $(list_add "$NAME" "$DESCRIPTION" on)"
+      else
+        MENULIST="$MENULIST $(list_add "$NAME" "$DESCRIPTION" off)"
+      fi
+    fi
+  done
+  menulist_eval "$MENULIST"
+}
+
+#############################################################
+# read_description $NAME
+read_description() {
+  local NAME="$1" IM_CONFIG_DESCRIPTION=""
+  CONF_PATH=$(get_conf_path_from_name "$NAME")
+  if [ -n "$CONF_PATH" ]; then
+    . "$CONF_PATH"
+  fi
+  echo -n "$IM_CONFIG_DESCRIPTION"
+}
+
+#############################################################
+# describe_configuration $NAME
+# -> MSG
+describe_configuration() {
+  local NAME="$1" MSG
+  if [ "$NAME" = "auto" ]; then
+    MSG="\
+$(eval_gettext 'Configuration file'): ~/$IM_CONFIG_CONF_FILE ($(eval_gettext 'removed'))
+$(eval_gettext 'IM framework'): $NAME
+$(eval_gettext 'Description'): $(eval_gettext 'automatically select and activate IM'): $(priority_im_name)"
+  else
+    MSG="\
+$(eval_gettext 'Configuration file'): ~/$IM_CONFIG_CONF_FILE
+$(eval_gettext 'IM framework'): $NAME
+$(eval_gettext 'Description'): $(read_description "$NAME")"
+  fi
+  echo -n "$MSG"
+}
+
+#############################################################
+# keep_im_msgbox $TITLE
+keep_im_msgbox() {
+  local MSG
+  logger_debug "D:   Keeping the configuration file unchanged as $(read_set_name_in_conf)"
+  MSG="\
+$(eval_gettext 'The configuration file is kept unchanged.')
+
+$(describe_configuration "$NAME")
+
+$IM_CONFIG_RTFM"
+  $MSGBOX "$IM_CONFIG_TITLE" "$MSG" || true
+}
+#############################################################
+# write_im_msgbox "$NAME"
+write_im_conf() {
+  local NAME="$1" MD5SUM
+  if [ "$NAME" = "auto" ]; then
+    rm -f "$IM_CONFIG_CONF_PATH"
+  else
+    logger_debug "D:   Write configuration NAME=$NAME to ~/$IM_CONFIG_CONF_FILE"
+    {
+      echo "# This is generated and managed by im-config(1) on $(date -R)"
+      echo "run_im $NAME"
+    } > "$IM_CONFIG_CONF_PATH"
+    sync
+    MD5SUM="$(md5sum < "$IM_CONFIG_CONF_PATH")"
+    echo "# im-config signature: $MD5SUM" >> "$IM_CONFIG_CONF_PATH"
+  fi
+}
+
+#############################################################
+# update_im_msgbox "$TITLE" "$NAME"
+# -> LOGICAL_TRUE for OK/Cansel
+update_im_msgbox() {
+  local NAME="$1" MSG
+  MSG="\
+$(eval_gettext 'The configuration file is updated.')
+
+$(describe_configuration "$NAME")
+
+$(eval_gettext 'Restart the session to activate the new IM.')
+
+$IM_CONFIG_RTFM"
+  $MSGBOX "$IM_CONFIG_TITLE" "$MSG" || true
+}
+
+#############################################################
+help () {
+  cat <<EO_HELP
+$IM_CONFIG_TITLE
+
+Set up IM framework configuration
+
+${0##*/} [-p|-i|-d|-r|-w <name>|-c|-q|-v|-t <name>|-h]
+
+OPTIONS:
+-p        Possible IM frameworks
+-i        Installed IM frameworks
+-d        Default values
+-r        Report configuration values
+-w <name> Write the IM framework <name>
+-c        Console terminal dialogue
+-q        Quiet logging
+-v        Verbose logging
+-t <fn>   Test execute <fn>
+-h        Print this message
+
+  $IM_CONFIG_COPYRIGHT
+EO_HELP
+}
+#############################################################
+report_possible_im () {
+  for CONF_PATH in "$IM_CONFIG_DATA_BASE"/[2345][0123456789]_*.conf; do
+    NAME=$(get_name_from_conf_path "$CONF_PATH")
+    echo "$NAME"
+  done
+}
+#############################################################
+report_installed_im () {
+  for CONF_PATH in "$IM_CONFIG_DATA_BASE"/[2345][0123456789]_*.conf; do
+    NAME=$(get_name_from_conf_path "$CONF_PATH")
+    if is_conf_available "$NAME"; then
+      echo "$NAME"
+    fi
+  done
+}
+#############################################################
+report_current_values () {
+  echo "$IM_CONFIG_TITLE"
+  echo "$IM_CONFIG_COPYRIGHT"
+  echo "IM_CONFIG_VERBOSE='$IM_CONFIG_VERBOSE'"
+  echo "IM_CONFIG_CURRENT_DESKTOP='$IM_CONFIG_CURRENT_DESKTOP'"
+  echo "IM_CONFIG_LC_CTYPE='$IM_CONFIG_LC_CTYPE'"
+  if [ -e "$HOME/$IM_CONFIG_CONF_FILE" ]; then
+    echo "Configuration file: ~/$IM_CONFIG_CONF_FILE"
+  else
+    echo "Configuration file: ~/$IM_CONFIG_CONF_FILE (removed)"
+  fi
+  echo "IM framework (set): $(read_set_name_in_conf)"
+  echo "IM framework (auto): $(priority_im_name)"
+}
+#############################################################
+report_default_values () {
+  for VAR in DESKTOP_TO_SETUP_IM LOCALES_TO_SETUP_IM \
+        DESKTOP_TO_USE_FCITX5 LOCALES_TO_USE_FCITX5 \
+        IM_CONFIG_SETMODE IM_CONFIG_VERBOSE ; do
+      eval "VALUE=\"\$$VAR\""
+      echo "$VAR=$VALUE"
+    done
+}
+#############################################################
+# Start main
+#############################################################
+#############################################################
+# Parse command line arguments
+#############################################################
+# enable msgbox/yesno dialog in normal code
+while [ -n "$1" ]; do
+  case $1 in
+    -c)
+      if [ -x /usr/bin/whiptail ]; then
+        IM_CONFIG_DIALOG="WHIPTAIL"
+      else
+        echo "E: whiptail must be installed." >&2
+        logger_error "E: whiptail must be installed."
+        exit 1
+      fi
+      ;;
+    -q)
+      # debug logging mode
+      IM_CONFIG_VERBOSE=0
+      ;;
+    -v)
+      # debug logging mode
+      IM_CONFIG_VERBOSE=2
+      ;;
+    -t)
+      # test functions
+      shift
+      if [ -z "$1" ]; then
+        echo "E: -t option requires <function_name> [<arg>...]'" >&2
+        exit 1
+      elif "$@"; then
+        exit 0
+      else
+        exit 1
+      fi
+      ;;
+    -p)
+      report_possible_im
+      exit 0
+      ;;
+    -i)
+      report_installed_im
+      exit 0
+      ;;
+    -d)
+      report_default_values
+      exit 0
+      ;;
+    -r)
+      report_current_values
+      exit 0
+      ;;
+    -w)
+      shift
+      write_im_conf "$1"
+      exit 0
+      ;;
+    -h)
+      help
+      exit 0
+      ;;
+    "")
+      break
+      ;;
+    *)
+      logger_error "E: unknown option: $*"
+      exit 1
+      ;;
+  esac
+  shift
+done
+#############################################################
+# The following fails under autopkgtest if used logger_info as
+#    'Failed to create stream fd: No such file or directory'
+#############################################################
+logger_debug "D: im-config SESSION='$XDG_SESSION_TYPE' UID=$(id -u) PID=$$ PPID=$PPID CONFIG='$IM_CONFIG_CONF_PATH'"
+logger_debug "D:   QT_IM_MODULE='$QT_IM_MODULE' QT_IM_MODULES='$QT_IM_MODULES' XMODIFIERS='$XMODIFIERS'"
+logger_debug "D:   GTK_IM_MODULE='$GTK_IM_MODULE' CLUTTER_IM_MODULE='$CLUTTER_IM_MODULE' SDL_IM_MODULE='$SDL_IM_MODULE'"
+logger_debug "D:   IM_CONFIG_DIALOG='$IM_CONFIG_DIALOG' for DISPLAY='$DISPLAY' WAYLAND_DISPLAY='$WAYLAND_DISPLAY'"
+#############################################################
+# Dialog tool selection (GUI/CUI) optimization
+#############################################################
+if [ -z "$DISPLAY" ] && [ -z "$WAYLAND_DISPLAY" ]; then
+  echo "E: Use im-config under GUI environment.  Invalid DISPLAY='$DISPLAY' WAYLAND_DISPLAY='$WAYLAND_DISPLAY'" >&2
+  logger_error "E: Use im-config under GUI environment.  Invalid DISPLAY='$DISPLAY' WAYLAND_DISPLAY='$WAYLAND_DISPLAY'"
+  exit 1
+fi
+#############################################################
+# main UI for im-config
+#############################################################
+if [ "$XDG_SESSION_TYPE" != "x11" ]; then
+  notify_non_x11_msgbox
+  exit 1
+elif [ "$(count_im)" = "0" ]; then
+  # no IM package installed
+  notify_no_im_msgbox
+elif [ -r "$IM_CONFIG_CONF_PATH" ]; then
+  if check_md5sum "$IM_CONFIG_CONF_PATH"; then
+    im_config_ui
+  else
+    notify_modified_msgbox
+  fi
+elif [ ! -e "$IM_CONFIG_CONF_PATH" ]; then
+  # auto: no config file
+  im_config_ui
+else
+  notify_unreadable_msgbox
+fi

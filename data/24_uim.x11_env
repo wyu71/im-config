@@ -1,0 +1,12 @@
+# set variables for the plain XIM
+XMODIFIERS=@im=uim
+
+# Let's assume all required modules are installed
+GTK_IM_MODULE=uim
+QT_IM_MODULE=uim
+CLUTTER_IM_MODULE=xim
+# See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1008481#40
+SDL_IM_MODULE=uim
+
+# daemon program to launch
+IM_CONFIG_LAUNCH="/usr/share/im-config/data/24_uim.x11_launch"

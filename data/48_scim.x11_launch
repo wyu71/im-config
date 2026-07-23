@@ -1,0 +1,4 @@
+# start scim daemon
+if [ -x /usr/bin/scim ]; then
+  /usr/bin/scim --daemon
+fi

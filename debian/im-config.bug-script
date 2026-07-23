@@ -1,18 +1,28 @@
 #!/bin/sh
+echo "=== XDG_SESSION_TYPE='$XDG_SESSION_TYPE' ===" >&3
+echo >&3
 echo "=== command path ==" >&3
-type im-config >&3
+ls -l "$(type -p im-config)" >&3
 echo >&3
 #
-echo "=== im-config API -l: available IM ===" >&3
-echo -n "im-config -l => " >&3
-/usr/bin/im-config -l >&3
+echo "=== im-config API -p: possible IM ===" >&3
+echo -n "im-config -p => " >&3
+/usr/bin/im-config -p >&3
 echo >&3
 #
-echo "=== im-config API -m: selected IM ===" >&3
-echo "im-config -m => " >&3
-echo "   'system' 'user' 'automatic' 'override' 'autobase'" >&3
-echo -n "   ">&3
-/usr/bin/im-config -m|sed -e "s/^\(.*\)$/\\\'\1\\\'	/"| xargs echo >&3
+echo "=== im-config API -i: installed IM ===" >&3
+echo "im-config -i => " >&3
+/usr/bin/im-config -i >&3
+echo >&3
+#
+echo "=== im-config API -d: default values ===" >&3
+echo "im-config -d => " >&3
+/usr/bin/im-config -d >&3
+echo >&3
+#
+echo "=== im-config API -r: report config ===" >&3
+echo "im-config -r => " >&3
+/usr/bin/im-config -r >&3
 echo >&3
 #
 echo "=== /etc/default/im-config ==" >&3
@@ -24,7 +34,7 @@ if [ -x /usr/bin/localectl ]; then
     /usr/bin/localectl status >&3
     echo >&3
 fi
-if [ x$XDG_SESSION_TYPE != xwayland ]; then
+if [ "$XDG_SESSION_TYPE" = "x11" ]; then
     echo "=== /etc/X11/default-display-manager ===" >&3
     /bin/cat /etc/X11/default-display-manager >&3
     echo >&3
@@ -34,9 +44,9 @@ if [ x$XDG_SESSION_TYPE != xwayland ]; then
         /usr/bin/setxkbmap -print >&3
         echo >&3
     fi
-    if [ -f $HOME/.Xmodmap ]; then
+    if [ -f "$HOME/.Xmodmap" ]; then
         echo "=== ~/.Xmodmap ===" >&3
-        /bin/cat $HOME/.Xmodmap >&3
+        /bin/cat "$HOME/.Xmodmap" >&3
         echo >&3
     fi
 fi
@@ -46,3 +56,5 @@ env|grep -E "^(XDG_|.*DISPLAY)"|sort >&3
 env|grep -E "^(XMODIFIERS|.*IM_MODULE)"|sort >&3
 echo >&3
 
+echo "=== systemd journal ==" >&3
+journalctl -b -t im-config >&3

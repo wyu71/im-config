@@ -1,0 +1,26 @@
+# start uim-xim daemon
+if [ -x /usr/bin/uim-xim ]; then
+  /usr/bin/uim-xim &
+fi
+# Starting GUI
+if [ -x /usr/bin/uim-toolbar ]; then
+  (
+    sleep 5
+    env GDK_BACKEND=x11 uim-toolbar
+  ) &
+elif [ -x /usr/bin/uim-toolbar-gtk3 ]; then
+  (
+    sleep 5
+    env GDK_BACKEND=x11 uim-toolbar-gtk3
+  ) &
+elif [ -x /usr/bin/uim-toolbar-gtk ]; then
+  (
+    sleep 5
+    env GDK_BACKEND=x11 uim-toolbar-gtk
+  ) &
+elif [ -x /usr/bin/uim-toolbar-qt5 ]; then
+  (
+    sleep 5
+    uim-toolbar-qt5
+  ) &
+fi

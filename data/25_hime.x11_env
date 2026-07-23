@@ -1,0 +1,12 @@
+# set variables for the plain XIM
+XMODIFIERS=@im=hime
+
+# If wayland IM v3  works well, we may be able to comment out next lines.
+GTK_IM_MODULE=hime
+QT_IM_MODULE=hime
+CLUTTER_IM_MODULE=xim
+SDL_IM_MODULE=hime
+# See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1008481#40
+
+# daemon program to launch
+IM_CONFIG_LAUNCH="25_hime.x11_launch_all"

@@ -1,0 +1,49 @@
+#!/bin/zsh -e
+# vim: set sts=4 expandtab:
+# Copyright (C) 2026 Osamu Aoki <osamu@debian.org>
+im_config_description () {
+  XDG_SESSION_TYPE=x11 im-config -q -t read_description "$1"
+}
+
+HOME=.
+export HOME
+
+IM_CONFIG_SETMODE="+x"
+export IM_CONFIG_SETMODE
+
+
+echo "autopackage test phase 1.1"
+ERRORS=""
+if [ "$(im_config_description auto)" != "activate IM with @@@-mark in its description" ]; then
+  im_config_description auto
+  echo "  <-- ERROR"
+  ERRORS="*$ERRORS"
+fi
+echo "autopackage test phase 1.2"
+if [ "$(im_config_description ibus)" != "activate Intelligent Input Bus (IBus)" ]; then
+  im_config_description ibus
+  echo "  <-- ERROR"
+  ERRORS="*$ERRORS"
+fi
+echo "autopackage test phase 1.3"
+if [ "$(im_config_description fcitx5)" != "activate Flexible Input Method Framework v5 (fcitx5)" ]; then
+  im_config_description fcitx5
+  echo "  <-- ERROR"
+  ERRORS="*$ERRORS"
+fi
+echo "autopackage test phase 1.4"
+if [ "$(im_config_description none)" != "do not activate any IM and use the desktop default" ]; then
+  im_config_description none
+  echo "  <-- ERROR"
+  ERRORS="*$ERRORS"
+fi
+echo "ERRORS='$ERRORS'"
+
+if [ -z "$ERRORS" ]; then
+  echo "SUCCESS"
+  exit 0
+else
+  echo "FAILURE"
+  exit 1
+fi
+

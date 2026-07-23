@@ -1,86 +1,314 @@
-im-config for Debian                     Osamu Aoki <osamu@debian.org>
+=============================================================================
+==                                                                         == 
+== im-config for Debian                     Osamu Aoki <osamu@debian.org>  ==
+==                                                           (2026-07-07)  == 
+=============================================================================
 
-Please also read
+The im-config package is for X11-based system.  It does nothing under
+Wayland-based system and can be removed safely.
 
-* https://wiki.debian.org/Keyboard
-* https://www.debian.org/doc/manuals/debian-reference/ch08.en.html#_the_keyboard_input
+This is updated note for version 1.0 on the im-config package.
 
-The modern keyboard input to a GUI application has 3 components:
+The GUI command UI of im-config is cleaned but kept it functionality
+unchanged.
 
-* Linux kernel to accept incoming signal from connected input devices
-  including keyboard.
-* Input method (IM) framework to generate a sequence of characters from
-  data accepted by Linux kernel.
-* Application to read a sequence of characters from IM via specified
-  data path.
+The CLI command options of im-config have been completely changed. (I
+don't expect user to use them except for the debugging.  So normal user
+should not worry about this.)
 
-The IM framework can generate sequence of over 130,000 characters in the
-ISO/IEC 10646 using inputs using less than 90 keys.  The actual data
-flow conversion is offloaded from IM framework to IM engines.  Simple IM
-engines are ones which generate accented Latin characters (This can
-emulate xmodmap(1) based mapping).  More elaborate IM engines are ones
-which generate CJK (Chinese, Japanese, Korean) characters.  There are
-IM engines supporting inputs of Arabic, Cyrillic, Ethiopic, Georgian,
-Greek, Hebrew, Indic, Thai, ...  characters.
+-----------------------------------------------------------------------------
+== How keyboard inputs are processed                                       ==
+-----------------------------------------------------------------------------
 
-There are a few popular general purpose IM frameworks:
+Here is roughly how keyboard inputs are processed.
 
-* iBus   -- default for GNOME Desktop (Yes, I use this)
-* Fcitx5 -- good alternative (used by Chinese task)
-* uim    -- good alternative (used by Japanese task)
+    Keyboard        UI panel    Configuration          Application
+    |                  ^ |           |                      ^    ^
+    v                  | v           v                      |    |
+    Linux kernel -> Input method engine (IME) -+-> Gtk, Qt -+    |
+                       | ^                     |                 |
+                       | |                     +-> X11, Wayland -+
+                       v |
+                    IME plugin (ibus-mozc, ...)
 
-You can install all these IM framework packages simultaneously but you
-can activate only one IM framework for one desktop session.
+See more at "The keyboard input" for the general introduction.
+    https://www.debian.org/doc/manuals/debian-reference/ch08#_the_keyboard_input
 
-This im-config package is a meta-framework to manage these IM frameworks
-by offering:
+NOTE: The IME plugin must be installed and activated. (See below)
 
-* automatic selection of system wide best IM framework choice
-* manually configurable system wide IM framework choice
-* automatic selection of user's best IM framework choice
-* manually configurable user's best IM framework choice
+Please note that the backend display server technology used on popular
+Debian GUI environments (GNOME, KDE, ...) is migrating from the X11 one
+to the Wayland one.
 
-If only one IM framework is installed, that is used automatically as the
-IM framework choice.
+-----------------------------------------------------------------------------
+== What is im-config                                                       ==
+-----------------------------------------------------------------------------
 
-The activation of IM framework involves staring daemon for communication
-and setting up pertinent environment variables to let the application
-know data protocol and connection (IM framework specific data protocol
-over dBus connection, or xim data protocol over X connection) to use to
-obtain input data sequence.
+The focus of this im-config package is configuration of classic
+X11-based GUI environments for the text input of non-latin1 characters
+(Indic, Chinese, Arabic, Japanese, Korean, Vietnamese, Thai, ...).
 
-The activation of IM engines is out of scope for this im-config package.
-You must activate IM engines using configuration mechanism offered by
-the IM framework.  (Some IM engine packages come with installation
-script to activate it upon installation.)
+New Wayland-based GUI environments is out of scope for im-config.
+(See "REFERENCE INFORMATION" below for Wayland IM configuration.)
 
-In order to ensure im-config settings and IM engine setting to be
-updated, you should restart the session or reboot the system.  (Yes, you
-should be able to use systemctl but it is prone for problems.)
+-----------------------------------------------------------------------------
+== im-config on X11                                                        ==
+-----------------------------------------------------------------------------
 
-NOTE:
-When adding support for Wayland GUI environment, GNOME decided to
-integrate iBus IM infrastructure tightly by hard-coding environment
-variable setting and start of daemon process in its startup code and by
-writing its own IM engine configuration mechanism as a part of
-"Settings".  So im-config does nothing for iBus under GNOME.
+The im-config package enables the best input method on the system as
+default without any user actions on X11-based desktop environments. 
 
-For specific IM environment set up, see Debian wiki pages.
-* iBus   -- https://wiki.debian.org/I18n/ibus
-* Fcitx5 -- https://wiki.debian.org/I18n/Fcitx5
-* uim    -- https://wiki.debian.org/I18n/uim
+If the highest priority IM program is IBus and the DE is GNOME on X11,
+this im-config does nothing and leave everything to GNOME on X11.
 
-You should consult the im-config(8) manage for the details of this
-command behavior.
+If you want to disable im-config and manually set up IM without any
+interference from im-config, set im-config command to "none" or
+uninstall it. 
 
-For some rare GUI programs run under Wayland which don't use any of X,
-GTK, or Qt, im-config may not set up input method framework for you.
-See README.Debian of ketty package for the work around example which
-sets specific environment variable to enable access to the IM framework.
+-----------------------------------------------------------------------------
+== How to install and activate IBus as IME on X11                          ==
+-----------------------------------------------------------------------------
 
-For the technical inner details of im-config, please read
-README.internal.
+Install pertinent IME plugin packages for the localized text input with IBus.
 
- -- Osamu Aoki <osamu@debian.org>,  2021-12-06T14:10:15+00:00
+  * Japanese IME: ibus-mozc
+  * Korean IME:   ibus-hangul 
+  * Thai IME:     ibus-libthai
+  * Chinese IME:  ibus-chewing, ibus-libpinyin, ibus-pinyin, ...
+  * Others IME:   ibus-m17n               (indic, arabic,...)
+  * See https://wiki.debian.org/I18n/ibus
 
-# vim: set tw=72 sts=4 sw=4 ai si et:
+This installation pulls in the ibus package by its package dependency.
+
+Installed IME plugins need to be activated by using configuration tool:
+
+  * `ibus-setup` (from a command line or GUI menu.)
+  * GNOME Settings (from "Add Input Source")
+  * Any other UI available on your DE
+
+IBus daemon for the X11 application run under the X11 is started from
+
+  * /etc/X11/Xsession.d/70im-config_launch
+
+This normally launch daemon program.
+
+For IBus under GNOME, its environment and its daemon is set from the
+user session:
+  * /usr/lib/systemd/user/org.freedesktop.IBus.session.GNOME.service
+    (thus "run_im ibus" becomes effectively "run_im none" for GNOME to
+    avoid conflicts)
+
+-----------------------------------------------------------------------------
+== Verbose execution                                                       ==
+-----------------------------------------------------------------------------
+
+Verbose logging under systemd is possible by uncommenting as
+`IM_CONFIG_VERBOSE="true"` in /etc/default/im-config.
+
+See "journalctl -b --user -t im-config"    (reportbug runs this)
+
+Please use verbose log for reporting bug.
+
+=============================================================================
+=============================================================================
+== REFERENCE INFORMATION (Wayland, Fcitx5, ...)                            ==
+=============================================================================
+=============================================================================
+
+-----------------------------------------------------------------------------
+== im-config on Wayland                                                    ==
+-----------------------------------------------------------------------------
+
+The im-config package does nothing for Wayland-based system and can be
+removed safely.
+
+-----------------------------------------------------------------------------
+== How to install and activate IBus as IME on Wayland                      ==
+-----------------------------------------------------------------------------
+
+Install pertinent IME plugin packages for the localized text input with
+IBus.
+
+    (This part is the same as the above X11 case)
+
+IBus daemon for the classic X application run under the xwayland is
+started from
+  * /etc/xdg/Xwayland-session.d/10-ibus-x11
+
+Although the Wayland core protocol doesn't even support the input of
+accented characters, popular Wayland Compositors, such as Mutter for
+GNOME or KWin for KDE implement extension protocols such as the
+text-input-unstable-v3 for the text input.
+
+If your application is build with the latest GTK or Qt libraries, there
+is no need to set environment variables manually.
+
+See "current Wayland protocols and their support status"
+  * https://absurdlysuspicious.github.io/wayland-protocols-table/ )
+
+For IBus under GNOME, its environment and its daemon is set from the
+user session:
+  * /usr/lib/systemd/user/org.freedesktop.IBus.session.GNOME.service
+
+If you ever need to set environment variables manually for programs
+using xwayland or for the backward compatibility using XMODIFIERS etc.,
+create a file such as "~/.config/environment.d/50-input-method.conf "to
+set them.  Please note this accepts only value assignments. See
+environment.d(5). See upstream resources:
+
+  * https://github.com/ibus/ibus/wiki/WaylandDesktop
+
+Here are key environment variables set for IBus automatically set by
+GNOME on Wayland and thier purpose.
+
+  * `GTK_IM_MODULE` (not set)
+  * `CLUTTER_IM_MODULE` (not set)
+  * `QT_IM_MODULE=ibus` (for programs build with older Qt)
+  * `QT_IM_MODULES=wayland,ibus` (for programs build with newer Qt)
+  * `XMODIFIES=@im=ibus` (for xwayland)
+
+Here are references to the historical input method support for Wayland.
+
+  * Wayland and input methods
+      https://dorotac.eu/posts/input_method/ (2020)
+  * State of input method
+      https://dorotac.eu/posts/input_broken/ (2024)
+  * Wayland input method project post-mortem
+      https://dorotac.eu/posts/im-finished/ (2026)
+
+If you are on other DE which doesn't support IM as much as GNOME, you
+need to configure:
+ * user's environment variables
+ * start up of the daemon program for IME
+ * start up of the GUI panel program for the configuration of IME
+
+-----------------------------------------------------------------------------
+== Use of Fcitx in place of IBus                                           ==
+-----------------------------------------------------------------------------
+
+Fcitx (version 5) supports IBus compatible protocol.  So it can be used
+as an alternative to IBus.
+
+Install pertinent IME plugin packages for the localized text input with Fcitx5.
+Fcitx5 is popular with Chinese users.
+
+  * Chinese IME:  fcitx5-chinese-addons ...
+
+In order to use Fcitx5 under GNOME, install a configuration UI package:
+
+  * gnome-shell-extension-kimpanel
+
+See Debian and upstream resources:
+
+  * https://wiki.debian.org/I18n/Fcitx5
+  * https://fcitx-im.org/wiki/Using_Fcitx_5_on_Wayland
+
+-----------------------------------------------------------------------------
+== Why no Wayland support from im-config                                   ==
+-----------------------------------------------------------------------------
+
+There is no explicit Wayland support from im-config since it doesn't
+require any configuration which was required on the X11 system.
+
+Both newer GNOME and KDE are run under their respective Wayland
+environments for Debian/forky. These DEs already configure IME and
+im-config is safely removed for them.
+
+For other DEs, situation is very fluid and no stable ways to support
+them from im-config.
+
+Since most popular Wayland compositor implementations support for
+text-input-unstable-v3, there is no real needs to set up environment
+variables except for the backward compatibility.
+
+Each DE should set up to start IME and its UI configurator programs.
+(via autostart mechanism and/or systemd user session unit files of the
+respective DE)  These communicate via Dbus for text-input-unstable-v3.
+
+For modern application, they are mostly built with GTK ot Qt libraries.
+These support text-input-unstable-v3. (For Fcitx5, `ibus` in the below
+examples should be replaced by `fcitx`.)
+
+For classic X application run under xwayland environment, you may need
+to set up XMODIFIES to support XIM-based input handling manually if DE
+doesn't do so.  For ibus, this is:
+
+  * `XMODIFIES=@im=ibus`
+
+For supporting newer GTK 4 applications, there is no to set upgw
+environment variables such as GTK_IM_MODULES.  The
+text-input-unstable-v3 seems to be designed to support GTK4 without it
+since it can discover service via DBus.
+
+For supporting Qt applications based on both newer and older version of
+the library, setting both QT_IM_MODULE and QT_IM_MODULES should provide
+the optimal setup.  For ibus, this is:
+
+  * `QT_IM_MODULE=ibus`
+  * `QT_IM_MODULES=wayland,ibus`
+
+If you care only Qt applications based on the newer version of the
+library,  you can do without setting both QT_IM_MODULE and
+QT_IM_MODULES.
+
+-----------------------------------------------------------------------------
+== Why not setting environment from /etc/profile.d/* for Wayland           ==
+-----------------------------------------------------------------------------
+
+Each DE under the Wayland is run as an user session.  So the best place
+set up its environment is a file in ~/.config/environment.d/ .
+
+Using system wide configuration such as /etc/profile.d/* is non-optimal.
+Also, zsh doesn't parse these files.
+
+  #1057628 support zsh as login shell and wayland env
+  https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1057628
+
+-----------------------------------------------------------------------------
+== Why no activation of IME plugins                                        ==
+-----------------------------------------------------------------------------
+
+Creating a single i18n Live CD image requires not to activate IME plugin
+without user requested action.
+
+IBus and Fcitx5 use different dconf (GSetting) variable to set the
+initial IME plugin settings.
+
+Thus, it is non-trivial to add such feature covering all use cases in
+im-config and I consider it should be out of scope for im-config.
+
+-----------------------------------------------------------------------------
+== Backend display server identification of im-config                      ==
+-----------------------------------------------------------------------------
+
+Identify the display server technology using the "XDG_SESSION_TYPE"
+environment variable to be "x11" or not.
+
+-----------------------------------------------------------------------------
+== Desktop environment identification of im-config                         ==
+-----------------------------------------------------------------------------
+
+Due to some historical complications and backward compatibility support
+needs, this im-config uses IM_CONFIG_CURRENT_DESKTOP generated mainly
+from XDG_CURRENT_DESKTOP defined in the "Desktop Entry Specification"
+since its version 1.2.
+
+  * https://specifications.freedesktop.org/menu/latest/onlyshowin-registry.html
+
+I see following XDG_CURRENT_DESKTOP values in the source code of session
+packages but actual DE identification should use verbose logging
+outputs.
+
+    * budgie-session       GNOME
+    * cinnamon-session     ?????    (cinnamon or X-Cinnamon)
+    * gnome-flashback      GNOME-Flashback:GNOME
+    * gnome-session        GNOME
+    * lxqt-session         LXQt
+    * lxsession            LXDE     (this code mentions Lubuntu migration,
+                                     and has example with qt/platform=lxqt)
+    * mate-session-manager MATE
+    * plasma-workspace     KDE
+    * xfce4-session        XFCE
+
+ -- Osamu Aoki <osamu@debian.org>,  Tue, 07 Jul 2026 10:04:13 +0000
+# vim: set tw=72 ai si et:

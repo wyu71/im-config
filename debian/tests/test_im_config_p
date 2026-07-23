@@ -1,0 +1,23 @@
+#!/bin/sh -e
+# vim: set sts=4 expandtab:
+# Copyright (C) 2026 Osamu Aoki <osamu@debian.org>
+HOME=.
+export HOME
+
+IM_CONFIG_SETMODE="+x"
+export IM_CONFIG_SETMODE
+
+if [ "$(XDG_SESSION_TYPE=x11 im-config -q -p|wc -l)" != "7" ]; then
+  echo "'$(XDG_SESSION_TYPE=x11 im-config -q -p| wc -l)' is not '7'"
+  ERRORS="*$ERRORS"
+fi
+echo "ERRORS='$ERRORS'"
+
+if [ -z "$ERRORS" ]; then
+  echo "SUCCESS"
+  exit 0
+else
+  echo "FAILURE"
+  exit 1
+fi
+

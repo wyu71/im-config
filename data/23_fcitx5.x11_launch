@@ -1,0 +1,4 @@
+# start fcitx5 daemon
+if [ -x /usr/bin/fcitx5 ]; then
+  /usr/bin/fcitx5 -d 2> /dev/null
+fi

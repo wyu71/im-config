@@ -1,45 +1,34 @@
 # Default im-config mode (see im-config(8))
 
-# This im-config helps to start best available input method (IM)
+# This im-config helps to start best available input method for
+# the X11 system
 
-# Always start highest priority IM
-IM_CONFIG_DEFAULT_MODE=auto
-# Start or not to start IM dynamically under CJKV/desktop environment
-#IM_CONFIG_DEFAULT_MODE=cjkv
-# Never start IM by im-config (Leave it to desktop system)
-#IM_CONFIG_DEFAULT_MODE=none
+# Conditions are AND-logic
+#  * DESKTOP_TO_SETUP_IM
+#  * LOCALES_TO_SETUP_IM
+#  * DESKTOP_TO_USE_FCITX5
+#  * LOCALES_TO_USE_FCITX5
 
-# cjkv mode behavior:
-#  case 1:
-#    * desktop is listed in CJKV_DEFAULT_DESKTOP
-#    * locale is under so-called CJKV environments
-#    --> auto mode
-#  case 2:
-#    * desktop is listed in CJKV_DEFAULT_DESKTOP
-#    * locale is *not* under so-called CJKV environments
-#    --> none mode
-#  case 3:
-#    * desktop is *not* listed in CJKV_DEFAULT_DESKTOP
-#    * locale is under any environments
-#    --> auto mode
-#
-CJKV_DEFAULT_DESKTOP="*"
-#CJKV_DEFAULT_DESKTOP="KDE:LXQt:XFCE"
+# List of desktop to use some IM over none
+DESKTOP_TO_SETUP_IM="ANY"
+#DESKTOP_TO_SETUP_IM="except:GNOME"
+#DESKTOP_TO_SETUP_IM="KDE:LXQt:XFCE"
+#DESKTOP_TO_SETUP_IM=""
 
-# List of locales for so-called CJKV environments
-CJKV_LOCALES="zh_TW:zh_HK:zh_SG:zh_CN:ja_JP:ko_KR:vi_VN"
+# List of locales to use some IM over none
+LOCALES_TO_SETUP_IM="ANY"
+#LOCALES_TO_SETUP_IM="zh_TW:zh_HK:zh_SG:zh_CN:ja_JP:ko_KR:vi_VN"
+#LOCALES_TO_SETUP_IM=""
 
-# Set locale dependent preferred IM over standard auto mode if not GNOME
-IM_CONFIG_PREFERRED_RULE="zh_CN,fcitx5:zh_TW,fcitx5:zh_HK,fcitx5:zh_SG,fcitx5"
+# List of desktop to use fcitx5 over ibus
+#DESKTOP_TO_USE_FCITX5="ANY"
+DESKTOP_TO_USE_FCITX5="KDE:LXQt"
+#DESKTOP_TO_USE_FCITX5=""
 
-# User and system wide configuration is normally done via im-config program.
-# The above IM_CONFIG_PREFERRED_RULE sets locale dependent preferred IM
-# override rule.  If you wish to use uim over ibus just for ja_JP,
-# add :ja_JP,uim at the end of the above list. (Marked by "!" in GUI)
-
-# List of desktop systems which starts ibus if available
-#   Applicable desktops are excluded for applying IM_CONFIG_PREFERRED_RULE
-DESKTOP_SETUP_IBUS="GNOME"
+# List of locales to use fcitx5 over ibus
+LOCALES_TO_USE_FCITX5="ANY"
+#LOCALES_TO_USE_FCITX5="zh_CN:zh_TW:zh_HK:zh_SG"
+#LOCALES_TO_USE_FCITX5=""
 
 # Trace commands for debug
 # (This may cause problem configuration file generated under console mode)

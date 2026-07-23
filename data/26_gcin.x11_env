@@ -1,0 +1,12 @@
+# set variables for the plain XIM
+XMODIFIERS=@im=gcin
+
+# Let's assume all required modules are installed
+GTK_IM_MODULE=gcin
+QT_IM_MODULE=gcin
+CLUTTER_IM_MODULE=xim
+SDL_IM_MODULE=gcin
+# See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1008481#40
+
+# daemon program to launch
+IM_CONFIG_LAUNCH="/usr/share/im-config/data/26_gcin.x11_launch"

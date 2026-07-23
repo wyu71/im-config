@@ -1,0 +1,4 @@
+# 
+disable=SC1090 # Can't follow non-constant source.
+disable=SC3037 # In POSIX sh, echo flags are undefined
+disable=SC3043 # In POSIX sh, local is undefined

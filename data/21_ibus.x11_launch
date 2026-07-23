@@ -1,0 +1,7 @@
+# start IBus
+
+# start IBus daemon and IM panel
+if [ -x /usr/bin/ibus-daemon ]; then
+  /usr/bin/ibus-daemon --daemonize --xim
+fi
+

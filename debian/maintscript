@@ -1,0 +1,4 @@
+# Used 0.62.1,0.62.2. ... for local test
+rm_conffile  /etc/X11/xinit/xinputrc 0.62.9
+rm_conffile  /etc/xdg/autostart/im-config.desktop 0.62.9
+rm_conffile  /etc/profile.d/im-config_wayland.sh 0.62.9

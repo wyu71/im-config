@@ -1,0 +1,126 @@
+# vim: set ft=sh:
+# Input Method configuration, UI functions
+# (C) Osamu Aoki <osamu@debian.org>, GPL-2+
+#
+#############################################################
+# Generic GUI/console UI functions
+#############################################################
+
+# use only logger_debug
+
+# msgbox (wrap and scroll)
+#   $1 TITLE
+#   $2 MESSAGE_TEXT
+#   -> LOGICAL_TRUE  (0) for OK
+#   -> LOGICAL_FALSE (1) for CANSEL
+msgbox() {
+  if [ "$IM_CONFIG_DIALOG" = "KDIALOG" ]; then
+    # KDE GUI
+    tmp_file=$(mktemp --tmpdir im-config-kdialog.XXXXXXXX)
+    echo -n "$2" > "$tmp_file"
+    kdialog --title "$1" --textbox "$tmp_file" --geometry=600x400 2> /dev/null
+    rm -f "$tmp_file"
+  elif [ "$IM_CONFIG_DIALOG" = "ZENITY" ]; then
+    # GTK GUI
+    zenity --width=600 --height=400 --title "$1" --info --text="$2"
+  else
+    # console
+    whiptail --title "$1" --msgbox "$2" 15 76
+  fi
+}
+
+# yesno (text size is fixed and must be small)
+#   $1 TITLE
+#   $2 MESSAGE_TEXT
+#   RETURN LOGICAL_TRUE  (0) for YES
+#   RETURN LOGICAL_FALSE (1) for NO
+yesno() {
+  if [ "$IM_CONFIG_DIALOG" = "KDIALOG" ]; then
+    # KDE GUI
+    kdialog --title "$1" --yesno "$2" --geometry=600x400 2> /dev/null
+  elif [ "$IM_CONFIG_DIALOG" = "ZENITY" ]; then
+    # GTK GUI
+    zenity --title "$1" --width=600 --height=400 --question --text="$2"
+  else
+    # console
+    whiptail --title "$1" --yesno "$2" 20 76
+  fi
+}
+
+# radiolist_init (size fixed)
+#   $1 TITLE
+#   $2 TOP_TEXT
+#   $3 colum1(GUI)
+#   $4 colum2(GUI)
+#   $5 colum3(GUI)
+radiolist_init() {
+  if [ "$IM_CONFIG_DIALOG" = "KDIALOG" ]; then
+    # KDE GUI
+    printf "%s" "kdialog --title=\"$1\" --radiolist \"$2\" --geometry=600x400"
+  elif [ "$IM_CONFIG_DIALOG" = "ZENITY" ]; then
+    # GTK GUI zenity
+    printf "%s" "zenity --title=\"$1\" --width=600 --height=400 --text=\"$2\" --list --radiolist --column \"$3\" --column \"$4\" --column \"$5\""
+  else
+    # console whiptail
+    printf "%s" "whiptail --title \"$1\" --radiolist \"$2\" 23 76 18"
+  fi
+}
+
+# checklist_init (size fixed)
+#   $1 TITLE
+#   $2 TOP_TEXT
+#   $3 colum1(GUI)
+#   $4 colum2(GUI)
+#   $5 colum3(GUI)
+#   -> return: space separated quoted IDs -- kdialog, whiptail
+#   -> return: space separated unquoted IDs -- zenity
+checklist_init() {
+  if [ "$IM_CONFIG_DIALOG" = "KDIALOG" ]; then
+    # KDE GUI
+    printf "%s" "kdialog --title=\"$1\" --checklist \"$2\""
+  elif [ "$IM_CONFIG_DIALOG" = "ZENITY" ]; then
+    # GTK GUI zenity
+    printf "%s" "zenity --title=\"$1\" --width=600 --height=400 --text=\"$2\" --separator=\" \" --list --checklist --column \"$3\" --column \"$4\" --column \"$5\""
+  else
+    # console whiptail
+    printf "%s" "whiptail --title \"$1\" --checklist \"$2\" 23 76 18"
+  fi
+}
+
+# list_add (size fixed)
+# $1 $y                    ID_STRING (no space)
+# $2 \"$(dsc_short $y)\"   EXPLANATION (space allowed)
+# $3 on/off                SELECTION (no space)
+list_add() {
+  if [ "$IM_CONFIG_DIALOG" = "KDIALOG" ]; then
+    # KDE GUI
+    printf "%s" "$1 \"$2\" $3"
+  elif [ "$IM_CONFIG_DIALOG" = "ZENITY" ]; then
+    # GTK GUI
+    if [ "$3" = "on" ]; then
+      printf "%s" "TRUE $1 \"$2\""
+    else
+      printf "%s" "FALSE $1 \"$2\""
+    fi
+  else
+    # console
+    printf "%s" "$1 \"$2\" $3"
+  fi
+}
+
+# menulist_eval
+# $1 command-line-string
+#   RETURN ID_STRING if selected to STDOUT     (OK)
+#   RETURN ""        if not selected to STDOUT (Cansel or all unselected-OK)
+menulist_eval() {
+  if [ "$IM_CONFIG_DIALOG" = "KDIALOG" ]; then
+    # KDE GUI
+    eval "$*" 2> /dev/null
+  elif [ "$IM_CONFIG_DIALOG" = "ZENITY" ]; then
+    # GTK GUI
+    eval "$*" 2> /dev/null
+  else
+    # console
+    eval "$*" 2>&1
+  fi
+}

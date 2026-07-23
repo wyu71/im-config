@@ -1,0 +1,14 @@
+#!/bin/sh -e
+# check syntax of browser start script
+echo "== ZSH SYNTAX START =="
+echo "Syntax check of installed zsh script: im-config"
+/bin/zsh -n /usr/bin/im-config
+echo "Syntax check of installed zsh script: im-launch"
+/bin/zsh -n /usr/bin/im-launch
+echo "Syntax check of installed zsh script: 70im-config_launc"
+/bin/zsh -n /etc/X11/Xsession.d/70im-config_launch
+echo "Syntax check of installed bash script: data/*.x11_env data/*.x11_launch"
+for f in /usr/share/im-config/data/*.x11_env /usr/share/im-config/data/*.x11_launch; do
+  /bin/zsh -n "$f"
+done
+echo "== ZSH SYNTAX SUCCESS =="

@@ -1,0 +1,44 @@
+# vim: set ft=sh:
+# Common shell routine used by im-config
+# (C) 2026 Osamu Aoki <osamu@debian.org>, GPL-2+
+#
+#############################################################
+# Common logging functions `
+#############################################################
+# Note: autopkgtext compatibility
+# Do not invoke systemd-cat in autopkgtest
+#  --> Failed to create stream fd: No such file or directory
+#
+# IM_CONFIG_VERBOSE:
+#   0: error
+#   1: error + warn + info
+#   2: error + warn + info + debug
+#
+if [ -n "$IM_CONFIG_VERBOSE" ] && [ "$IM_CONFIG_VERBOSE" -lt 0 ]; then
+  LOGGER=':'
+elif [ -e /usr/bin/systemd-cat ]; then
+  # this may be problematic under autopkgtest
+  LOGGER='/usr/bin/systemd-cat -p 6 -t "im-config" echo'
+elif [ -e /usr/bin/logger ]; then
+  LOGGER='/usr/bin/logger -p local0.info -t "im-config" echo'
+else
+  LOGGER='>&2 echo'
+fi
+
+logger_error() {
+  if [ -z "$IM_CONFIG_VERBOSE" ] || [ "$IM_CONFIG_VERBOSE" -ge 0 ]; then
+    eval "$LOGGER \"\$1\""
+  fi
+}
+
+logger_info() {
+  if [ -z "$IM_CONFIG_VERBOSE" ] || [ "$IM_CONFIG_VERBOSE" -ge 1 ]; then
+    eval "$LOGGER \"\$1\""
+  fi
+}
+
+logger_debug() {
+  if [ -n "$IM_CONFIG_VERBOSE" ] && [ "$IM_CONFIG_VERBOSE" -ge 2 ]; then
+    eval "$LOGGER \"\$1\""
+  fi
+}

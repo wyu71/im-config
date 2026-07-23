@@ -7,14 +7,15 @@ VERSION = $(shell dpkg-parsechangelog --format dpkg|\
 endif
 
 FILES = \
-	im-config_wayland.sh \
 	70im-config_launch \
-	im-config \
+	im-config.in \
 	im-launch \
-	share/im-config.common \
-	share/xinputrc.common.in \
-	$(wildcard data/*.rc) \
-	$(wildcard data/*.conf)
+	share/common_function \
+	share/logger_function \
+	share/ui_function \
+	$(wildcard data/*.conf) \
+	$(wildcard data/*.x11_env) \
+	$(wildcard data/*.x11_launch)
 
 PRETESTS = $(addsuffix .pretest, $(FILES))
 
@@ -22,24 +23,14 @@ TESTS = $(addsuffix .test, $(FILES))
 
 # escape  with \#
 LANGS = $(shell grep -v '^\#' po/LINGUAS)
-POTFILESIN = $(shell grep -v '^\#' po/POTFILES.in)
 
-all: share/xinputrc.common im-config.desktop mo
+all: im-config im-config.desktop mo
 
-share/xinputrc.common: share/xinputrc.common.in
+im-config: im-config.in
 	sed -e "s/@@VERSION@@/$(VERSION)/" <$< >$@
 
 im-config.desktop: im-config.desktop.in
 	msgfmt --desktop --template=$< -d po -o $@
-
-pot: po/$(PROGRAM).pot
-
-po/$(PROGRAM).pot: FORCE
-	xgettext -o $@ --language=Shell $(POTFILESIN)
-	xgettext --join-existing -o $@ im-config.desktop.in
-
-po/%.po: po/$(PROGRAM).pot
-	msgmerge -U $@ $<
 
 po/locale/%/LC_MESSAGES/$(PROGRAM).mo: po/%.po
 	mkdir -p po/locale/$*/LC_MESSAGES
@@ -60,6 +51,7 @@ test:
 	@$(MAKE) $(TESTS)
 	-rm -f $(TESTS)
 	-rm -f $(PRETESTS)
+	echo "ALL TEST FINISHED"
 
 mo:	$(addsuffix /LC_MESSAGES/$(PROGRAM).mo, $(addprefix po/locale/, $(LANGS)))
 
@@ -71,7 +63,7 @@ foo:
 	echo "$(addsuffix .po, $(addprefix po/, $(LANGS)))"
 
 clean:
-	-rm -f share/xinputrc.common
+	-rm -f im-config
 	-rm -f default/im-config
 	-rm -f im-config.desktop
 	rm -rf po/locale
@@ -81,13 +73,9 @@ clean:
 
 distclean: clean
 
-# Use this target on devel branch source
-package:
-	debmake -t -y -zx -b':sh' -i sbuild
-
 update:
 	touch -t 200001010000 po/*.po
-	$(MAKE) po
-	$(MAKE) clean
+	$(MAKE) -C po update-po
+	$(MAKE) -C po clean-po
 
 .PHONY: all pot distclean clean mo update po test FORCE

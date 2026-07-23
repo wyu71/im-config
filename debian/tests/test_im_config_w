@@ -1,0 +1,34 @@
+#!/bin/bash -e
+# vim: set sts=4 expandtab:
+# Copyright (C) 2026 Osamu Aoki <osamu@debian.org>
+
+HOME=.
+export HOME
+
+IM_CONFIG_SETMODE="+x"
+export IM_CONFIG_SETMODE
+
+
+ #rm -f $HOME/.xinputrc
+XDG_SESSION_TYPE=x11 im-config -q -w none
+if [ ! -e "$HOME/.xinputrc" ]; then
+  echo "'im-config -w none' should create .xinputrc"
+  ERRORS="*$ERRORS"
+fi
+
+XDG_SESSION_TYPE=x11 im-config -q -w auto
+if [ -e "$HOME/.xinputrc" ]; then
+  echo "'im-config -w auto' should remove .xinputrc"
+  ERRORS="*$ERRORS"
+fi
+
+echo "ERRORS='$ERRORS'"
+
+if [ -z "$ERRORS" ]; then
+  echo "SUCCESS"
+  exit 0
+else
+  echo "FAILURE"
+  exit 1
+fi
+

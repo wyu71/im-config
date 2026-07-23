@@ -1,0 +1,5 @@
+XIM=none
+GTK_IM_MODULE=meego-im
+
+# daemon program to launch
+IM_CONFIG_LAUNCH="/usr/share/im-config/data/30_maliit.x11_launch"

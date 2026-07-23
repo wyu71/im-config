@@ -3,10 +3,8 @@ data/*                 usr/share/im-config/data
 default/im-config      etc/default
 im-config              usr/bin
 im-config.desktop      usr/share/applications
-im-config_wayland.sh   etc/profile.d
 im-launch              usr/bin
-im-launch.desktop      etc/xdg/autostart
 po/locale/*            usr/share/locale
-share/im-config.common usr/share/im-config
-share/xinputrc.common  usr/share/im-config
-xinputrc               etc/X11/xinit
+share/common_function  usr/share/im-config
+share/logger_function  usr/share/im-config
+share/ui_function      usr/share/im-config

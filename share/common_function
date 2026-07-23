@@ -1,0 +1,273 @@
+# Common shell routine used by im-config
+# vim: set ft=sh:
+# (C) Osamu Aoki <osamu@debian.org>, GPL-2+
+# Used by:
+#  * /usr/bin/im-config
+#  * /etc/X11/Xsession.d/70im-config_launch
+# These use following configuration files
+#  * /etc/default/im-config
+#  * ~/.xinputrc
+#############################################################
+# Generic functions
+#############################################################
+# match_item_in_list $ITEM $LIST
+#   $ITEM
+#   $LIST (:-separated list)
+#   ->  EXIT_SUCCESS (0) if match for non-nullstring ITEM found in LIST or LIST contain "ANY"
+#   ->  EXIT_FAILURE (1) if match not found in LIST or ITEM or LIST is ""
+#   valid LIST item: "" "ANY" ":foo" "foo:bar:baz" "non-foo"
+#############################################################
+find_item_in_list() {
+  local ITEM="$1" LIST="$2" EXIT_STATUS EXCEPT_FOUND
+  # EXIT_STATUS=EXIT_FAILURE (1)
+  EXIT_STATUS=1
+  # EXCEPT_FOUND=EXIT_FAILURE (1)
+  EXCEPT_FOUND=1
+  OLDIFS="$IFS"
+  IFS=':'
+  if [ -n "$ITEM" ] && [ -n "$LIST" ]; then
+    for X in $LIST; do
+      if [ -n "$X" ]; then
+        if [ "$EXCEPT_FOUND" = "1" ]; then
+          if [ "$X" = 'except' ]; then
+            EXCEPT_FOUND=0
+            EXIT_STATUS=0
+          elif [ "$X" = 'ANY' ]; then
+            EXIT_STATUS=0
+            break 1
+          elif [ "$X" = "$ITEM" ]; then
+            EXIT_STATUS=0
+            break 1
+          else
+            : # continue
+          fi
+        else
+          if [ "$X" = "$ITEM" ]; then
+            EXIT_STATUS=1
+            break 1
+          fi
+        fi
+      fi
+    done
+  fi
+  IFS="$OLDIFS"
+  return "$EXIT_STATUS"
+}
+
+
+#############################################################
+# read_variable_from_file $VARIABLE $FILE $DEFAULT
+#   $VARIABLE variable name as string
+#   $FILE     configuration file name (full path)
+#   $DEFAULT  if value is "" or undefined, use this as the default value
+# No sourcing of configuration file as shell code
+# Double quote required
+#############################################################
+read_variable_from_file() {
+  local FILE VARIABLE DEFAULT LINE VAR VALUE
+  VARIABLE="$1"
+  FILE="$2"
+  DEFAULT="$3"
+  while read -r LINE; do
+    # process only non-comment lines
+    if [ -n "${LINE%#*}" ]; then
+      VAR="${LINE%=*}"
+      VALUE="${LINE##*=}"
+      if [ "$VARIABLE" = "$VAR" ] && [ "$LINE" != "$VALUE" ] && [ "$LINE" != "$VAR" ]; then # match
+        VALUE="${VALUE#\"}"
+        VALUE="${VALUE%\"}"
+        VALUE="${VALUE#\'}"
+        VALUE="${VALUE%\'}"
+        if [ -n "$VALUE" ]; then
+          echo -n "$VALUE"
+        else
+          echo -n "$DEFAULT"
+        fi
+        break
+      fi
+    fi
+  done < "$FILE"
+}
+#############################################################
+# User modification verification functions used by im-config
+# check_md5sum $FILENAME
+#   ->  EXIT_SUCCESS (0) if md5sum match
+#   ->  EXIT_FAILURE (1) if md5sum not match
+#############################################################
+check_md5sum() {
+  local FILENAME="$1" R=1
+  logger_debug "D:   @check_md5sum: FILENAME='$FILENAME'"
+  if [ -r "$FILENAME" ] &&
+    [ "# im-config signature: $(head -n -1 "$FILENAME" | md5sum)" = "$(tail -n 1 "$FILENAME")" ]; then
+    R=0
+  elif [ -r "$FILENAME" ] &&
+    [ "# im-config signiture: $(head -n -1 "$FILENAME" | md5sum)" = "$(tail -n 1 "$FILENAME")" ]; then
+    R=0 # compatibility for old spell error
+  fi
+  return $R
+}
+#############################################################
+# Function for configuration file deta/*.conf
+#############################################################
+# get_name_from_conf_path $CONF_PATH $RANGE
+#   extract NAME from CONF_PATH using RANGE
+#############################################################
+get_name_from_conf_path() {
+  local CONF_PATH="$1" RANGE="$2" NAME
+  if [ -z "$CONF_PATH" ] || [ ! -r "$CONF_PATH" ]; then
+    NAME="none"
+  else
+    if [ -z "$RANGE" ]; then
+      RANGE="0123456789"
+    fi
+    NAME=${CONF_PATH#"${IM_CONFIG_DATA_BASE}"/["${RANGE}"][0123456789]_}
+    NAME=${NAME%.conf}
+  fi
+  echo -n "$NAME"
+}
+#############################################################
+# get_conf_path_from_name $NAME $RANGE
+#   extract CONF_PATH from NAME using RANGE
+#############################################################
+get_conf_path_from_name() {
+  local NAME="$1" RANGE="$2" CONF_PATH
+  if [ -z "$RANGE" ]; then
+    RANGE="0123456789"
+  fi
+  CONF_PATH=''
+  for CONF_PATH in "${IM_CONFIG_DATA_BASE}"/["${RANGE}"][0123456789]_"${NAME}".conf; do
+    # pick first match only
+    if [ ! -r "$CONF_PATH" ]; then
+      # no match
+      CONF_PATH=''
+    fi
+    break
+  done
+  echo -n "$CONF_PATH"
+}
+#############################################################
+# package_status <packagename>
+#   return TRUE if the package is properly installed (dpkg)
+#   used in package_installed() {...} in $IM_CONFIG_DATA_BASE/??_${IM_CONFIG_NAME}.conf
+#   used in package_menu() {...} in $IM_CONFIG_DATA_BASE/??_${IM_CONFIG_NAME}.conf
+#############################################################
+package_status() {
+  local PACKAGE_NAME="$1" R=1
+  if [ "$(LC_ALL=C dpkg-query -l "$PACKAGE_NAME" 2> /dev/null |
+    sed -n '6s/\([^ ]*\) .*$/\1/p' | head -1)" = "ii" ]; then
+    # return TRUE
+    R=0
+  fi
+  return $R
+}
+#############################################################
+# is_menu_availabl $NAME
+#############################################################
+is_conf_available() {
+  local NAME="$1"
+  CONF_PATH=$(get_conf_path_from_name "$NAME" "01234567")
+  if [ -n "$CONF_PATH" ]; then
+    . "$CONF_PATH"
+    package_menu
+  else
+    false
+  fi
+}
+#############################################################
+# priority_im_name
+#   --> string: priority IM configuration (considering locale, fcitx5 priority over ibus)
+#############################################################
+priority_im_name() {
+  local CONF_PATH NAME=""
+  if find_item_in_list "$IM_CONFIG_CURRENT_DESKTOP" "$DESKTOP_TO_SETUP_IM"; then
+    if find_item_in_list "$IM_CONFIG_LC_CTYPE" "$LOCALES_TO_SETUP_IM"; then
+      for CONF_PATH in "$IM_CONFIG_DATA_BASE"/[23456][0123456789]_*.conf; do
+        NAME=$(get_name_from_conf_path "$CONF_PATH")
+        if is_conf_available "$NAME"; then
+          if [ "$NAME" = "ibus" ] &&
+            find_item_in_list "$IM_CONFIG_CURRENT_DESKTOP" "$DESKTOP_TO_USE_FCITX5" &&
+            find_item_in_list "$IM_CONFIG_LC_CTYPE" "$LOCALES_TO_USE_FCITX5" &&
+            is_conf_available "fcitx5"; then
+            NAME="fcitx5"
+          fi
+          break
+        fi
+      done
+    fi
+  fi
+  if [ -n "$NAME" ]; then
+    logger_debug "D:   @priority_im_name: '$NAME'"
+    echo -n "$NAME"
+  else
+    logger_debug "D:   @priority_im_name: 'none' (no IM configuration provided by im-config)"
+    echo -n "none"
+  fi
+}
+#############################################################
+# run_im $NAME
+#   run selected input method (IM) configuration script (x11)
+# Functions used by im-config hook script (x11)
+#############################################################
+run_im() {
+  local NAME="$1" CONF_PATH
+  if [ "$NAME" = "auto" ] || [ "$NAME" = "missing" ] ; then
+    NAME="$(priority_im_name)"
+  fi
+  if [ "$NAME" = "ibus" ] && [ "$IM_CONFIG_CURRENT_DESKTOP" = "GNOME" ]; then
+    NAME="none"
+  fi
+  # ensure valid name
+  CONF_PATH=$(get_conf_path_from_name "$NAME")
+  NAME=$(get_name_from_conf_path "$CONF_PATH")
+  CONF_PATH=$(get_conf_path_from_name "$NAME")
+  . "${CONF_PATH%.conf}.x11_env"
+  logger_debug "D:   @run_im: configure with '${CONF_PATH%.conf}.x11_env'"
+}
+#############################################################
+# Common GLOBAL variables (derived)
+#############################################################
+# Read GLOBAL vars by parsing /etc/default/im-config without using source
+if [ -r "$IM_CONFIG_DEFAULT" ]; then
+  DESKTOP_TO_SETUP_IM="$(read_variable_from_file "DESKTOP_TO_SETUP_IM" "$IM_CONFIG_DEFAULT" "ANY")"
+  logger_debug "D:   @common_function_global: DESKTOP_TO_SETUP_IM='$DESKTOP_TO_SETUP_IM'"
+  LOCALES_TO_SETUP_IM="$(read_variable_from_file "LOCALES_TO_SETUP_IM" "$IM_CONFIG_DEFAULT" "ANY")"
+  logger_debug "D:   @common_function_global: LOCALES_TO_SETUP_IM='$LOCALES_TO_SETUP_IM'"
+  DESKTOP_TO_USE_FCITX5="$(read_variable_from_file "DESKTOP_TO_USE_FCITX5" "$IM_CONFIG_DEFAULT" "KDE:LXQt")"
+  logger_debug "D:   @common_function_global: DESKTOP_TO_USE_FCITX5='$DESKTOP_TO_USE_FCITX5'"
+  LOCALES_TO_USE_FCITX5="$(read_variable_from_file "LOCALES_TO_USE_FCITX5" "$IM_CONFIG_DEFAULT" "ANY")"
+  logger_debug "D:   @common_function_global: LOCALES_TO_USE_FCITX5='$LOCALES_TO_USE_FCITX5'"
+  IM_CONFIG_SETMODE="$(read_variable_from_file "IM_CONFIG_SETMODE" "$IM_CONFIG_DEFAULT" "")"
+  logger_debug "D:   @common_function_global: IM_CONFIG_SETMODE='$IM_CONFIG_SETMODE'"
+  IM_CONFIG_VERBOSE="$(read_variable_from_file "IM_CONFIG_VERBOSE" "$IM_CONFIG_DEFAULT" "1")"
+  logger_debug "D:   @common_function_global: IM_CONFIG_VERBOSE='$IM_CONFIG_VERBOSE'"
+fi
+
+
+# Set IM_CONFIG_CURRENT_DESKTOP as a normalized XDG_CURRENT_DESKTOP
+if [ -n "$XDG_CURRENT_DESKTOP" ]; then
+  IM_CONFIG_CURRENT_DESKTOP="$XDG_CURRENT_DESKTOP"
+  logger_debug "D:   @common_function: IM_CONFIG_CURRENT_DESKTOP <- XDG_CURRENT_DESKTOP='$XDG_CURRENT_DESKTOP'"
+elif [ "$DESKTOP_SESSION" = 'lxqt' ] || [ "$DESKTOP_SESSION" = 'Lubuntu' ]; then
+  # hack since LXQt sets XDG_CURRENT_DESKTOP late - https://github.com/lxqt/lxqt/issues/1830
+  # Upstream claims that the issue was fixed in lxqt-session 0.17.0. However, Lubuntu 21.10
+  # uses 0.17.1 but it still does not work. So let's keep this hack for now.
+  IM_CONFIG_CURRENT_DESKTOP="LXQt"
+  logger_debug "D:   @common_function_global: IM_CONFIG_CURRENT_DESKTOP <- DESKTOP_SESSION='$DESKTOP_SESSION' (special case for Ubuntu lxqt Lubuntu)"
+elif [ -n "$DESKTOP_SESSION" ]; then
+  #  Since LXDE also sets $XDG_CURRENT_DESKTOP='', let's make generic fall back
+  IM_CONFIG_CURRENT_DESKTOP="$DESKTOP_SESSION"
+  logger_debug "D:   @common_function_global: IM_CONFIG_CURRENT_DESKTOP <- DESKTOP_SESSION='$DESKTOP_SESSION' (generic backword compatibility)"
+else
+  IM_CONFIG_CURRENT_DESKTOP="UNDEFINED"
+  logger_debug "D:   @common_function_global: IM_CONFIG_CURRENT_DESKTOP <- 'UNDEFINED'"
+fi
+
+# Set IM_CONFIG_LC_CTYPE as a primary variable to determine locale
+IM_CONFIG_LC_CTYPE=$(locale | sed -nr 's/LC_CTYPE=\"?([a-zA-Z_]*).*/\1/p')
+logger_debug "D:   @@common_function_global: IM_CONFIG_LC_CTYPE='$IM_CONFIG_LC_CTYPE'"
+
+export DESKTOP_TO_SETUP_IM LOCALES_TO_SETUP_IM \
+  DESKTOP_TO_USE_FCITX5 LOCALES_TO_USE_FCITX5 \
+  IM_CONFIG_SETMODE IM_CONFIG_VERBOSE \
+  IM_CONFIG_CURRENT_DESKTOP \
+  IM_CONFIG_LC_CTYPE

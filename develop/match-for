@@ -1,0 +1,22 @@
+#!/bin/sh -e
+# UI test
+# (C) 2026 Osamu Aoki <osamu@debian.org>, GPL-2+
+#
+# test_find_item_in_list
+test_find_item_in_list () {
+  im-config -t find_item_in_list "$1" "$2" && echo -n "TRUE" || echo -n "FALSE"
+  printf "\t expected '%s'\t for ITEM='%s' \tLIST='%s'\n" "$3" "$1" "$2"
+}
+
+test_find_item_in_list ""      ""               "FALSE"
+test_find_item_in_list ""      "GNOME"          "FALSE"
+test_find_item_in_list ""      "ANY"            "FALSE"
+test_find_item_in_list ""      "except:GNOME"   "FALSE"
+test_find_item_in_list "GNOME" ""               "FALSE"
+test_find_item_in_list "GNOME" "GNOME"          "TRUE"
+test_find_item_in_list "GNOME" "A:B"            "FALSE"
+test_find_item_in_list "GNOME" "A:GNOME"        "TRUE"
+test_find_item_in_list "GNOME" "ANY"            "TRUE"
+test_find_item_in_list "GNOME" "except:GNOME"   "FALSE"
+test_find_item_in_list "GNOME" "except:KDE:GNOME" "FALSE"
+test_find_item_in_list "XFCE"  "except:KDE:GNOME" "TRUE"

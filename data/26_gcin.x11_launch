@@ -1,0 +1,4 @@
+# start gcin daemon
+if [ -x /usr/bin/gcin ]; then
+  /usr/bin/gcin &
+fi

@@ -1,0 +1,32 @@
+#!/bin/sh -e
+# UI test
+# (C) 2026 Osamu Aoki <osamu@debian.org>, GPL-2+
+#############################################################
+# Parse command line arguments
+#############################################################
+IM_CONFIG_DIALOG=ZENITY
+while [ -n "$1" ]; do
+  case $1 in
+    -z)
+      IM_CONFIG_DIALOG=ZENITY
+      ;;
+    -k)
+      IM_CONFIG_DIALOG=KDIALOG
+      ;;
+    -w)
+      IM_CONFIG_DIALOG=WHIPTAIL
+      ;;
+    *)
+      break
+      ;;
+  esac
+  shift
+done
+export IM_CONFIG_DIALOG
+MSG="$(im-config -t radiolist_init "Title (example)" "TOP TEXT\n2nd line" "Select" "ID" "Description")"
+MSG="$MSG $(im-config -t list_add "US" "U.S.A." "off")"
+MSG="$MSG $(im-config -t list_add "JP" "Japane" "off")"
+MSG="$MSG $(im-config -t list_add "FR" "France" "off")"
+MSG="$MSG $(im-config -t list_add "DE" "Germany" "on")"
+im-config -t menulist_eval "$MSG"
+echo

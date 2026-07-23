@@ -1,0 +1,43 @@
+#!/bin/sh -e
+# UI test
+# (C) 2026 Osamu Aoki <osamu@debian.org>, GPL-2+
+#
+# dash_test_find_item_in_list with dash
+#: >TMP
+dash_test_find_item_in_list () {
+  RESULT=$(XDG_SESSION_TYPE=x11 bash -c "im-config -t find_item_in_list \"$1\" \"$2\"" && echo -n "TRUE" || echo -n "FALSE")
+  if [ "$RESULT" != "$3" ]; then
+    echo -n "*"
+    #echo "TEST_AS_FALSE: find_item_in_list '$1' '$2' EXPECT='$3' != RESULT='$RESULT'" >>TMP
+  #else
+    #echo "TEST_AS_TRUE:  find_item_in_list '$1' '$2' EXPECT='$3' == RESULT='$RESULT'" >>TMP
+  fi
+}
+
+ERRORS=""
+ERRORS="$ERRORS$(dash_test_find_item_in_list ""      ""               "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list ""      "GNOME"          "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list ""      "ANY"            "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list ""      "except:GNOME"   "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" ""               "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" "GNOME"          "TRUE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" "A:B"            "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" "A:GNOME"        "TRUE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" "ANY"            "TRUE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" "except:GNOME"   "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "GNOME" "except:KDE:GNOME" "FALSE")"
+ERRORS="$ERRORS$(dash_test_find_item_in_list "XFCE"  "except:KDE:GNOME" "TRUE")"
+#rm -f $HOME/.xinputrc
+echo "ERRORS='$ERRORS'"
+#echo "=== LOG === >>>"
+#cat TMP
+#echo "=== LOG === <<<"
+
+if [ -z "$ERRORS" ]; then
+  echo "SUCCESS"
+  exit 0
+else
+  echo "FAILURE"
+  exit 1
+fi
+

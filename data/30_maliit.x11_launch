@@ -1,0 +1,4 @@
+# start fcitx5 daemon
+if [ -x /usr/bin/maliit-server ]; then
+  /usr/bin/maliit-server -software -bypass-wm-hint
+fi

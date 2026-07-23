@@ -1,61 +1,30 @@
-#!/bin/sh
-# vim: set sts=4 expandtab:
-# Copyright (C) 2012 Osamu Aoki <osamu@debian.org>
-# Copyright (C) 2012 Aron Xu <aron@debian.org>
+#!/bin/sh -e
+# Copyright (C) 2026 Osamu Aoki <osamu@debian.org>
 # GNU General Public License version 2 or later.
 #
-# Launch input method configuration script for X, GNOME, KDE, ...
-# see im-launch(1).
+# /etc/X11/Xsession.d/70im-config_launch (caller)
+# caller exports: HOME IM_CONFIG_LAUNCH IM_CONFIG_ENVIROMENT_KEY
 
-if [ "x$1" = "x-h" ] || [ "x$1" = "x--help" ] || [ "x$1" = "x" ]; then
-    echo "Unknown option: $1"
-    echo "Usage: $0 SESSION-PROGRAM"
-    exit 1
+IM_CONFIG_VERBOSE="${IM_CONFIG_VERBOSE:-1}"
+IM_CONFIG_USR_BASE="${IM_CONFIG_USR_BASE:-/usr/share/im-config}"
+# shellcheck disable=SC1091
+. "${IM_CONFIG_USR_BASE}/logger_function"
+logger_info "I: @im-launch UID=$(id -u) PID=$$ PPID=$PPID"
+logger_debug "D:   @im-launch: GTK_IM_MODULE='$GTK_IM_MODULE' QT_IM_MODULE='$QT_IM_MODULE' QT_IM_MODULES='$QT_IM_MODULES' CLUTTER_IM_MODULE='$CLUTTER_IM_MODULE' SDL_IM_MODULE='$SDL_IM_MODULE' XMODIFIERS='$XMODIFIERS'"
+# check unchanged
+if [ -n "$IM_CONFIG_LAUNCH" ] && [ -r "$IM_CONFIG_LAUNCH" ]; then
+  if [ "$IM_CONFIG_ENVIROMENT_KEY" = "$GTK_IM_MODULE:$QT_IM_MODULE:$XMODIFIERS:$CLUTTER_IM_MODULE:$SDL_IM_MODULE" ]; then
+    logger_debug "D:   @im-launch: Start daemon at /etc/X11/Xsession.d/99x11-common_start (variables untouched from /etc/X11/Xsession.d/70im-config_launch)"
+    . "$IM_CONFIG_LAUNCH"
+  else
+    logger_info "W:   @im-launch: Don't start daemon at /etc/X11/Xsession.d/99x11-common_start (variables changed from /etc/X11/Xsession.d/70im-config_launch)"
+  fi
+else
+  logger_info "W:   @im-launch: Don't start daemon since IM_CONFIG_LAUNCH='$IM_CONFIG_LAUNCH' is not available"
 fi
 
-if [ "$1" = 'true' ] && [ "$XDG_SESSION_TYPE" != 'wayland' ]; then
-    # This program was autostarted, but was already run at the
-    # start of an X session, so don't run it now too.
-    exit 0
+if [ -n "$1" ]; then
+  logger_debug "D:   @im-launch: EXIT @ im-launch with 'exec $*'"
+  exec "$@"
 fi
-
-if [ "$IM_CONFIG_CHECK_ENV" = 1 ] && \
-   [ "$IM_CONFIG_PHASE" = 1 ]; then
-    # If tweaked, keep hands off :-)
-    if ! env -i \
-        HOME="$HOME" \
-        IM_CONFIG_SET_XMODIFIERS="$XMODIFIERS" \
-        IM_CONFIG_SET_GTK_IM_MODULE="$GTK_IM_MODULE" \
-        IM_CONFIG_SET_QT_IM_MODULE="$QT_IM_MODULE" \
-        IM_CONFIG_SET_CLUTTER_IM_MODULE="$CLUTTER_IM_MODULE" \
-        IM_CONFIG_SET_SDL_IM_MODULE="$SDL_IM_MODULE" \
-        sh -c '. /etc/X11/Xsession.d/70im-config_launch
-        [ "$IM_CONFIG_SET_XMODIFIERS" = "$XMODIFIERS" ] &&
-        [ "$IM_CONFIG_SET_GTK_IM_MODULE" = "$GTK_IM_MODULE" ] && \
-        [ "$IM_CONFIG_SET_QT_IM_MODULE" = "$QT_IM_MODULE" ] && \
-        [ "$IM_CONFIG_SET_CLUTTER_IM_MODULE" = "$CLUTTER_IM_MODULE" ] && \
-        [ "$IM_CONFIG_SET_SDL_IM_MODULE" = "$SDL_IM_MODULE" ]'; then
-        unset IM_CONFIG_PHASE
-    fi
-    unset IM_CONFIG_CHECK_ENV
-fi
-
-IM_START_SESSION="$@"
-
-# If already tweaked, keep hands off :-)
-# If im-config is removed but not purged, keep hands off :-)
-if [ "$IM_CONFIG_PHASE" = 1 ]; then
-    IM_CONFIG_PHASE=2
-    # initialize all im-config common functions and parameters
-    . /usr/share/im-config/xinputrc.common
-    unset TEXTDOMAIN
-    unset TEXTDOMAINDIR
-    # source the first found configuration file
-    if [ -r "$IM_CONFIG_XINPUTRC_USR" ]; then
-        . $IM_CONFIG_XINPUTRC_USR
-    elif [ -r "$IM_CONFIG_XINPUTRC_SYS" ]; then
-        . $IM_CONFIG_XINPUTRC_SYS
-    fi
-    unset IM_CONFIG_PHASE
-fi
-exec $IM_START_SESSION
+logger_debug "D:   @im-launch: EXIT @ im-launch without 'exec'"

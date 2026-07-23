@@ -1,0 +1,12 @@
+# set variables for the plain XIM
+XMODIFIERS=@im=fcitx
+
+# Let's assume all required modules are installed
+GTK_IM_MODULE=fcitx
+QT_IM_MODULE=fcitx
+CLUTTER_IM_MODULE=xim
+# See https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1008481#40
+SDL_IM_MODULE=fcitx
+
+# daemon program to launch
+IM_CONFIG_LAUNCH="/usr/share/im-config/data/23_fcitx5.x11_launch"

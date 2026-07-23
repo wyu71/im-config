@@ -1,0 +1,18 @@
+#!/bin/sh
+set -e
+
+#DEBHELPER#
+
+# remove
+# drop this after forkiy+1 (X should own by xinit but it is not installed in the build environment)
+#
+#
+# rm_conffile  /etc/X11/xinit/xinputrc 0.62.9
+# rm_conffile  /etc/xdg/autostart/im-config.desktop 0.62.9
+# /etc/profile.d/⇄       owned by: base-files
+for DIR in  /etc/X11/xinit /etc/xdg/autostart /etc/xdg  ; do
+  if [ -x $DIR ]; then
+    # echo "Remove $DIR only if it is empty"
+    rmdir --ignore-fail-on-non-empty $DIR 2> /dev/null
+  fi
+done

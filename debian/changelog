@@ -1,26 +1,78 @@
-im-config (0.57-2deepin4) unstable; urgency=medium
+im-config (1.1) unstable; urgency=medium
 
-  * Fix parallel build race condition between msgfmt and msgmerge.
+  [ Andreas Tille ]
+  * If im-config package is removed and but the config not purged login
+    fails.  So check, whether the script that is called exists.
 
- -- Wang Yu <wangyu@uniontech.com>  Wed, 23 Apr 2026 20:30:00 +0800
+  [ Osamu Aoki ]
+  * README.*: refine contents (Closes: #654307, #983116, #1099858)
 
-im-config (0.57-2deepin3) unstable; urgency=medium
+ -- Osamu Aoki <osamu@debian.org>  Tue, 07 Jul 2026 19:53:23 +0900
 
-  * Do not start fcitx5 daemon by im-config, let autostart handle it.
+im-config (1.0) unstable; urgency=medium
 
- -- Wang Yu <wangyu@uniontech.com>  Thu, 23 Apr 2026 19:21:27 +0800
+  * Major code refactor with cleaner logic
+    (Closes: #1141583, #1134791)
+  * Remove old unsuccessful artifacts accumulated to support Wayland.
+  * No more root operation.
+  * Skip IBUS_ENABLE_SYNC_MODE (Closes: #1112639)
 
-im-config (0.57-2deepin2) unstable; urgency=medium
+ -- Osamu Aoki <osamu@debian.org>  Tue, 07 Jul 2026 02:01:46 +0900
 
-  * Move to main.
+im-config (0.62) unstable; urgency=medium
 
- -- Tianyu Chen <sweetyfish@deepin.org>  Wed, 08 Jan 2025 14:22:05 +0800
+  * fix rename in im-config
 
-im-config (0.57-2deepin1) unstable; urgency=medium
+ -- Osamu Aoki <osamu@debian.org>  Thu, 19 Mar 2026 16:15:13 +0900
 
-  * Add desktop file NoDisplay=true.patch
+im-config (0.61) unstable; urgency=medium
 
- -- xiangzelong <xiangzelong@deepin.org>  Tue, 30 Jan 2024 14:41:15 +0800
+  * refactor and rename for better logging
+  * po/Makefile -- add clean-po support
+  * debian/source/lintian-overrides No more needed
+  * update debian/README.*
+
+ -- Osamu Aoki <osamu@debian.org>  Thu, 19 Mar 2026 15:30:48 +0900
+
+im-config (0.60) unstable; urgency=medium
+
+  * Robust command detection logic (closes: #1130136)
+
+ -- Osamu Aoki <osamu@debian.org>  Tue, 10 Mar 2026 10:11:19 +0900
+
+im-config (0.59) unstable; urgency=medium
+
+  * Code refactor (stop wayland support) (closes: #1052005)
+  * No call to 70im-config_launch from im-launch
+  * No call to 70im-config_launch from im-config_wayland.sh
+  * Use systemd_cat/logger for error messages
+  * Use IM_CONFIG_ENTRY
+  * Updated README.internal and README.Debian
+  * DEBUG logging IM_CONFIG_DEBUG
+  * Drop menus for non-existing programs
+  * dgit-maint-native workflow
+  * salsa CI with more autopkgtest
+  * Wayland support code sections are disabled with 'false'
+    See https://bugs.debian.org/1052005 for the background
+  * Merge master/devel/upstream branches
+
+ -- Osamu Aoki <osamu@debian.org>  Wed, 04 Mar 2026 20:03:10 +0900
+
+im-config (0.58-1) unstable; urgency=medium
+
+  [ Gunnar Hjalmarsson ]
+  * Update POT and PO files manually only
+    - Fixes failure to build twice (closes: #1048552).
+  * Fix typo in im-config.8 (LP: #2032182)
+
+  [ Boyuan Yang ]
+  * Use README.Debian instead of README.Debian.gz across the scripts.
+    (Closes: #1121421)
+  * Update package uploaders list:
+    - Drop retired Gunnar Hjalmarsson. Thanks for your work.
+    + Add myself into the uploaders list.
+
+ -- Boyuan Yang <byang@debian.org>  Thu, 27 Nov 2025 20:01:37 -0500
 
 im-config (0.57-2) unstable; urgency=medium
 

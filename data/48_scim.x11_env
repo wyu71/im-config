@@ -1,0 +1,10 @@
+# set variables for the plain XIM
+XMODIFIERS=@im=SCIM
+
+# Let's assume all required modules are installed
+GTK_IM_MODULE=scim
+QT_IM_MODULE=scim
+CLUTTER_IM_MODULE=scim
+
+# daemon program to launch
+IM_CONFIG_LAUNCH="/usr/share/im-config/data/48_scim.x11_launch"

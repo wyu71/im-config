@@ -1,0 +1,4 @@
+# start hime daemon
+if [ -x /usr/bin/hime ]; then
+  /usr/bin/hime &
+fi

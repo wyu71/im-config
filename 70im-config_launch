@@ -1,51 +1,74 @@
 #!/bin/sh
-# vim: set sts=4 expandtab:
-# Copyright (C) 2012 Osamu Aoki <osamu@debian.org>
+# Copyright (C) 2012-2026 Osamu Aoki <osamu@debian.org>
 # Copyright (C) 2012 Aron Xu <aron@debian.org>
 # GNU General Public License version 2 or later.
 #
-# Input Method launcher hook ... see im-launch(1).
-# The hook script for dbus-launch is in 75 which changes $STARTUP string.
-# This shuld be befor this dbus-launch hook to ensure the working dbus
-# for input method.  Thus moved from 80 to 70.
+# IM (Input Method) launcher hook at 70 used in /etc/X11/Xsession.d/
+# This script should be executed before the dbus-launch hook at 75.
+# These hook scripts changes $STARTUP string used at 90.
 
-IMLAUNCH=/usr/bin/im-launch
-
-if [ "$IM_CONFIG_PHASE" = 1 ]; then
-    IM_CONFIG_CHECK_ENV=1
-    export IM_CONFIG_CHECK_ENV
-fi
-
-# If already tweaked, keep hands off :-)
-# If im-config is removed but not purged, keep hands off :-)
-if [ -z "$XMODIFIERS" ] && \
-   [ -z "$GTK_IM_MODULE" ] && \
-   [ -z "$QT_IM_MODULE" ] && \
-   [ -z "$CLUTTER_IM_MODULE" ] && \
-   [ -z "$SDL_IM_MODULE" ] && \
-   [ -r /usr/share/im-config/xinputrc.common ]; then
-    IM_CONFIG_PHASE=1
-    export IM_CONFIG_PHASE
-    # initialize all im-config common functions and parameters
-    . /usr/share/im-config/xinputrc.common
-    unset TEXTDOMAIN
-    unset TEXTDOMAINDIR
-    # source the first found configuration file
-    if [ -r "$IM_CONFIG_XINPUTRC_USR" ]; then
-        . $IM_CONFIG_XINPUTRC_USR
-    elif [ -r "$IM_CONFIG_XINPUTRC_SYS" ]; then
-        . $IM_CONFIG_XINPUTRC_SYS
+# system sets $XDG_SESSION_TYPE", "$XDG_CURRENT_DESKTOP"
+# Minimized code for key variables
+#############################################################
+#############################################################
+# GLOBAL variables (initial)
+#############################################################
+IM_CONFIG_VERBOSE="${IM_CONFIG_VERBOSE:-1}"
+IM_CONFIG_DEFAULT="${IM_CONFIG_DEFAULT:-/etc/default/im-config}"
+IM_CONFIG_USR_BASE="${IM_CONFIG_USR_BASE:-/usr/share/im-config}"
+IM_CONFIG_DATA_BASE="${IM_CONFIG_DATA_BASE:-/usr/share/im-config/data}"
+IM_CONFIG_CONF_FILE=".xinputrc"
+IM_CONFIG_CONF_PATH="$HOME/$IM_CONFIG_CONF_FILE"
+IMLAUNCH="/usr/bin/im-launch"
+IM_CONFIG_ENVIROMENT_KEY=""
+export IM_CONFIG_ENVIROMENT_KEY
+IM_CONFIG_LAUNCH=""
+export IM_CONFIG_LAUNCH
+if [ ! -e "$IMLAUNCH" ]; then
+  : # do nothing
+  IMLAUNCH=""
+elif [ "$XDG_SESSION_TYPE" != "x11" ]; then
+  # shellcheck disable=SC1091
+  . "${IM_CONFIG_USR_BASE}/logger_function"
+  logger_info "W: Skip /etc/X11/Xsession.d/70im-config_launch since XDG_SESSION_TYPE ='$XDG_SESSION_TYPE' (ERROR)"
+else
+  # shellcheck disable=SC1091
+  . "${IM_CONFIG_USR_BASE}/logger_function"
+  # im-config is installed.  Check situation
+  if [ -z "$XMODIFIERS" ] &&
+    [ -z "$GTK_IM_MODULE" ] &&
+    [ -z "$QT_IM_MODULE" ] &&
+    [ -z "$CLUTTER_IM_MODULE" ] &&
+    [ -z "$SDL_IM_MODULE" ]; then
+    # if fresh, set environments
+    # shellcheck disable=SC1091
+    . "${IM_CONFIG_USR_BASE}/common_function"
+    logger_info "I: Set environment variables from /etc/X11/Xsession.d/70im-config_launch (all empty strings)"
+    if [ -r "$IM_CONFIG_CONF_PATH" ]; then
+      logger_debug "D: Source ~/$IM_CONFIG_CONF_FILE"
+      . "$IM_CONFIG_CONF_PATH"
+    else
+      logger_debug "D: Execute 'run_im auto' since no ~/$IM_CONFIG_CONF_FILE"
+      run_im auto
     fi
-    # always export variables even for manual configuration.
+    logger_info "I: >>> GTK_IM_MODULE='$GTK_IM_MODULE' QT_IM_MODULE='$QT_IM_MODULE' XMODIFIERS='$XMODIFIERS' CLUTTER_IM_MODULE='$CLUTTER_IM_MODULE' SDL_IM_MODULE='$SDL_IM_MODULE'"
+    IM_CONFIG_ENVIROMENT_KEY="$GTK_IM_MODULE:$QT_IM_MODULE:$XMODIFIERS:$CLUTTER_IM_MODULE:$SDL_IM_MODULE"
+    #
     export XMODIFIERS
     export GTK_IM_MODULE
     export QT_IM_MODULE
     export CLUTTER_IM_MODULE
     export SDL_IM_MODULE
+    export IM_CONFIG_LAUNCH
+    export IM_CONFIG_ENVIROMENT_KEY
+  else
+    # already tweaked, keep hands off :-)
+    logger_info "W: Skip setting environment variables from /etc/X11/Xsession.d/70im-config_launch (some already set)"
+  fi
+
+  # Change $STARTUP string to im-launch while keeping the old $STARTUP string
+  # as its arguments
+  STARTUP="$IMLAUNCH $STARTUP"
+  logger_debug "D:  STARTUP='$STARTUP'"
 fi
 
-# Change $STARTUP string to im-launch while keeping the old $STARTUP string
-# as its arguments
-if [ "$XDG_SESSION_TYPE" != "wayland" ] && [ -x "$IMLAUNCH" ]; then
-    STARTUP="$IMLAUNCH $STARTUP"
-fi

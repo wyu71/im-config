@@ -4,18 +4,18 @@ Upstream-Name: im-config
 Source: https://salsa.debian.org/input-method-team/im-config.git
 
 Files: *
-Copyright: 2010-2023, Osamu Aoki <osamu@debian.org>
+Copyright: 2010-2026, Osamu Aoki <osamu@debian.org>
            2012, Aron Xu <aron@debian.org>
 License: GPL-2+
 
 Files: im-config.desktop.in
-Copyright: 2010-2023, Osamu Aoki <osamu@debian.org>
+Copyright: 2010-2026, Osamu Aoki <osamu@debian.org>
            2010, Andrew Lee <ajqlee@debian.org>
 License: GPL-2+
 
 Files: debian/control
 Copyright: 2005, Kenshi Muto <kmuto@debian.org>
-           2010-2023, Osamu Aoki <osamu@debian.org>
+           2010-2026, Osamu Aoki <osamu@debian.org>
 License: GPL-2+
 
 License: GPL-2+

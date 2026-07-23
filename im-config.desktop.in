@@ -8,3 +8,4 @@ Terminal=false
 Icon=input-keyboard
 Categories=Settings
 X-AppStream-Ignore=true
+# https://specifications.freedesktop.org/desktop-entry/latest/

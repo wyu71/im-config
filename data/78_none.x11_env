@@ -1,0 +1,14 @@
+#
+# Place holder for "none"
+#
+## set variables for the plain XIM
+#XMODIFIERS=@im=
+#
+## Let's assume all required modules are installed
+#GTK_IM_MODULE=
+#QT_IM_MODULE=
+#CLUTTER_IM_MODULE=
+#SDL_IM_MODULE=
+#
+# daemon program to launch
+#IM_CONFIG_LAUNCH=""

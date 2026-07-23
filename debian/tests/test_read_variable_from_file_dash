@@ -1,0 +1,19 @@
+#!/bin/sh -e
+ERRORS=""
+if [ "$(XDG_SESSION_TYPE=x11 im-config -t read_variable_from_file DESKTOP_TO_SETUP_IM   /etc/default/im-config "NULL")" != "ANY" ]; then
+  ERRORS="${ERRORS}*"
+fi
+if [ "$(XDG_SESSION_TYPE=x11 im-config -t read_variable_from_file DESKTOP_TO_USE_FCITX5 /etc/default/im-config "NULL")" != "KDE:LXQt" ]; then
+  ERRORS="${ERRORS}*"
+fi
+#rm -f $HOME/.xinputrc
+echo "ERRORS='$ERRORS'"
+
+if [ -z "$ERRORS" ]; then
+  echo "SUCCESS"
+  exit 0
+else
+  echo "FAILURE"
+  exit 1
+fi
+

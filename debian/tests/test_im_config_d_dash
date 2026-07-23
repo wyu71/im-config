@@ -1,0 +1,35 @@
+#!/bin/bash -e
+# vim: set sts=4 expandtab:
+# Copyright (C) 2026 Osamu Aoki <osamu@debian.org>
+HOME=.
+export HOME
+
+IM_CONFIG_SETMODE="+x"
+export IM_CONFIG_SETMODE
+
+LC_CTYPE="C"
+export LC_CTYPE
+TEXT=$(cat - << EOF
+DESKTOP_TO_SETUP_IM=ANY
+LOCALES_TO_SETUP_IM=ANY
+DESKTOP_TO_USE_FCITX5=KDE:LXQt
+LOCALES_TO_USE_FCITX5=ANY
+IM_CONFIG_SETMODE=
+IM_CONFIG_VERBOSE=
+EOF
+)
+if [ "$(XDG_SESSION_TYPE=x11 dash -c "im-config -d")" != "$TEXT" ]; then
+  echo " $TEXT"
+  echo " $(XDG_SESSION_TYPE=x11 dash -c "im-config -d")"
+  ERRORS="*$ERRORS"
+fi
+echo "ERRORS='$ERRORS'"
+
+if [ -z "$ERRORS" ]; then
+  echo "SUCCESS"
+  exit 0
+else
+  echo "FAILURE"
+  exit 1
+fi
+

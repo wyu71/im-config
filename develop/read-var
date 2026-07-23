@@ -1,0 +1,8 @@
+#!/bin/sh -e
+#  VARIABLE="$1"
+#  FILE="$2"
+#  DEFAULT="$3"
+im-config -t read_variable_from_file DESKTOP_TO_SETUP_IM   /etc/default/im-config "NULL"
+echo
+im-config -t read_variable_from_file DESKTOP_TO_USE_FCITX5 /etc/default/im-config "NULL"
+echo
